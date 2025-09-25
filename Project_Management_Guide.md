@@ -221,7 +221,7 @@ gantt
     title Sleep Scoring Project Timeline
     dateFormat  YYYY-MM-DD
     section Iteration 1
-    Sprint Planning       :a1, 2025-01-01, 2d
+    Sprint Planning       :a1, 2026-10-02, 2d
     Basic Pipeline Dev    :a2, after a1, 14d
     Testing & Review      :a3, after a2, 2d
     
