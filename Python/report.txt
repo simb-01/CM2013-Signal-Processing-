@@ -1,0 +1,14 @@
+
+    # Sleep Scoring Report - Iteration 1
+
+    ## Model
+    KNeighborsClassifier
+
+    ## Performance
+    Accuracy: ...
+    Kappa: ...
+    F1-score: ...
+
+    ## Notes
+    This is a dummy report. Implement full report generation.
+    

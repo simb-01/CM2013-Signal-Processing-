@@ -11,9 +11,22 @@ run('config.m'); % This will load config variables into the workspace
 fprintf('--- Sleep Scoring Pipeline - Iteration %d ---\n', CURRENT_ITERATION);
 
 % 1. Load Data
-% For jumpstart, we're using dummy data. In a real scenario, you'd iterate through files.
-edf_file = fullfile(TRAINING_DIR, "dummy.edf"); % Placeholder
-[eeg_data, labels] = data_loader_load_training_data(edf_file);
+% Example uses R1.edf and R1.xml - students should adapt for their dataset
+edf_file = fullfile(SAMPLE_DIR, 'R1.edf'); % Example EDF file
+xml_file = fullfile(SAMPLE_DIR, 'R1.xml'); % Corresponding annotation file
+
+% Handle both multi-channel and single-channel formats
+try
+    [multi_channel_data, labels, channel_info] = load_training_data(edf_file, xml_file);
+    fprintf('Multi-channel data loaded\n');
+    % Use first EEG channel for pipeline compatibility
+    eeg_data = squeeze(multi_channel_data.eeg(:, 1, :));
+    fprintf('Using EEG channel 1 for pipeline\n');
+catch
+    % Fallback to old format
+    [eeg_data, labels] = load_training_data(edf_file, xml_file);
+    fprintf('Single-channel data loaded\n');
+end
 
 % 2. Preprocessing
 preprocessed_data = [];
@@ -23,7 +36,7 @@ if USE_CACHE
 end
 
 if isempty(preprocessed_data)
-    preprocessed_data = preprocessing_preprocess(eeg_data, config);
+    preprocessed_data = preprocess(eeg_data, config);
     if USE_CACHE
         save_cache(preprocessed_data, cache_filename_preprocess, CACHE_DIR);
     end
@@ -37,27 +50,27 @@ if USE_CACHE
 end
 
 if isempty(features)
-    features = feature_extraction_extract_features(preprocessed_data, config);
+    features = extract_features(preprocessed_data, config);
     if USE_CACHE
         save_cache(features, cache_filename_features, CACHE_DIR);
     end
 end
 
 % 4. Feature Selection
-selected_features = feature_selection_select_features(features, labels, config);
+selected_features = select_features(features, labels, config);
 
 % 5. Classification
-model = classification_train_classifier(selected_features, labels, config);
+model = train_classifier(selected_features, labels, config);
 
 % Save the trained model for inference
 model_filename = sprintf('model_iter%d.mat', CURRENT_ITERATION);
 save_cache(model, model_filename, CACHE_DIR);
 
 % 6. Visualization
-visualization_visualize_results(model, selected_features, labels, config);
+visualize_results(model, selected_features, labels, config);
 
 % 7. Report Generation
-report_generate_report(model, selected_features, labels, config);
+generate_report(model, selected_features, labels, config);
 
 fprintf('--- Pipeline Finished ---\n');
 

@@ -1,33 +1,70 @@
-function [eeg_data, labels] = data_loader_load_training_data(filePath)
-%% Loads training data from an EDF file and its corresponding XML annotation file.
-% For the jumpstart, this function creates dummy data.
-% Replace this with actual EDF/XML loading logic.
+function [eeg_data, labels] = load_training_data(edfFilePath, xmlFilePath)
+%% STUDENT IMPLEMENTATION AREA: Load EDF and XML files.
+%
+% This function currently returns DUMMY DATA for jumpstart testing.
+% Students must implement actual EDF/XML loading:
+%
+% 1. Load EDF file using read_edf function
+% 2. Load XML annotations (sleep stage labels)
+% 3. Extract relevant channels (EEG, EOG, EMG)
+% 4. Segment into 30-second epochs
+% 5. Handle different sampling rates
+% 6. Match epochs with sleep stage labels
 
-fprintf('Loading training data from %s...\n', filePath);
-% Dummy data: 10 minutes of data at 100 Hz, 30-second epochs
-nEpochs = 20;
-nSamples = 30 * 100;
+fprintf('Loading training data from %s and %s...\n', edfFilePath, xmlFilePath);
+
+% TODO: Students must implement actual file loading
+% DUMMY DATA for jumpstart testing - students must replace this:
+fprintf('WARNING: Using dummy data! Students must implement actual EDF/XML loading.\n');
+
+% Realistic size: 8 hours = 8 * 60 * 2 = 960 epochs (30-second windows)
+nEpochs = 960; % 8 hours of sleep recording
+nSamples = 30 * 100; % 30 seconds at 100 Hz
+
+% Generate realistic dummy data
 eeg_data = randn(nEpochs, nSamples);
-labels = randi([0, 4], 1, nEpochs); % 5 sleep stages (0-4)
+
+% Generate realistic sleep stage distribution (not uniform)
+% Typical distribution: More N2, less N1 and REM, some Wake
+stage_probs = [0.05, 0.05, 0.50, 0.25, 0.15]; % Wake, N1, N2, N3, REM
+labels = randsample(0:4, nEpochs, true, stage_probs);
+
+fprintf('Generated dummy sleep data: %d epochs (%.1f hours)\n', nEpochs, nEpochs/120);
+for stage = 0:4
+    count = sum(labels == stage);
+    stage_names = {'Wake', 'N1', 'N2', 'N3', 'REM'};
+    fprintf('  %s: %d epochs (%.1f%%)\n', stage_names{stage+1}, count, count/nEpochs*100);
+end
 
 end
 
-function eeg_data = data_loader_load_holdout_data(filePath)
-%% Loads holdout data from an EDF file.
-% For the jumpstart, this function creates dummy data.
-% Replace this with actual EDF loading logic.
+function [eeg_data, record_info] = load_holdout_data(edfFilePath)
+%% STUDENT IMPLEMENTATION AREA: Load holdout EDF files (no labels).
+%
+% Similar to load_training_data but without XML annotations.
+% Students must implement actual EDF loading for competition data.
 
-fprintf('Loading holdout data from %s...\n', filePath);
-% Dummy data: 10 minutes of data at 100 Hz, 30-second epochs
-nEpochs = 20;
-nSamples = 30 * 100;
+fprintf('Loading holdout data from %s...\n', edfFilePath);
+
+% TODO: Students must implement actual EDF loading
+% DUMMY DATA for jumpstart testing - students must replace:
+fprintf('WARNING: Using dummy data! Students must implement actual EDF loading.\n');
+nEpochs = 960; % 8 hours of sleep recording
+nSamples = 30 * 100; % 30 seconds at 100 Hz
 eeg_data = randn(nEpochs, nSamples);
+record_info = struct('record_id', 1, 'n_epochs', nEpochs); % Dummy metadata
+fprintf('Generated dummy holdout data: %d epochs (%.1f hours)\n', nEpochs, nEpochs/120);
 
 end
 
-function [hdr, record] = data_loader_read_edf(filePath)
-%% Reads an EDF file using the provided edfread function.
-% Note: Use the custom edfread if the built-in MATLAB one is incompatible.
+function [hdr, record] = read_edf(filePath)
+%% EXAMPLE: Read an EDF file.
+%
+% This is a basic example. Students should expand this to:
+% - Handle different EDF variants
+% - Validate channel names and sampling rates
+% - Handle missing or corrupted data
+% - Extract specific time ranges
 
 fprintf('Reading EDF file: %s\n', filePath);
 % Placeholder for actual edfread call
