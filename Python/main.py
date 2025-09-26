@@ -8,8 +8,22 @@ from src.visualization import visualize_results
 from src.report import generate_report
 from src.utils import save_cache, load_cache
 import os
+import sys
+import io
+
 
 def main():
+    # Create a string buffer
+    stdout_buffer = io.StringIO()
+
+    # Save the original stdout
+    original_stdout = sys.stdout
+
+    # Redirect stdout to the buffer
+    sys.stdout = stdout_buffer 
+
+    print("\n=== PROCESSING LOG ===")
+
     print(f"--- Sleep Scoring Pipeline - Iteration {config.CURRENT_ITERATION} ---")
 
     # 1. Load Data
@@ -93,9 +107,16 @@ def main():
         print("Skipping visualization - no trained model")
 
     # 7. Report Generation
-    print("\n=== STEP 7: REPORT GENERATION ===")
+    print("\n=== STEP 7: PROCESSING LOG & REPORT GENERATION ===")
+
+    # Restore the original stdout
+    sys.stdout = original_stdout
+
+    # Get the captured output from the buffer
+    processing_log = stdout_buffer.getvalue()   
+     
     if model is not None:
-        generate_report(model, selected_features, labels, config)
+        generate_report(model, selected_features, labels, config, processing_log)
     else:
         print("Skipping report - no trained model")
 

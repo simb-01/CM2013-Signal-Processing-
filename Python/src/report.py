@@ -1,4 +1,4 @@
-def generate_report(model, features, labels, config):
+def generate_report(model, features, labels, config, processing_log):
     """
     Generates a report summarizing the results.
 
@@ -17,6 +17,9 @@ def generate_report(model, features, labels, config):
     # - Confusion matrix
     # - Details about the model and features used
     report_content = f"""
+    {processing_log}
+
+
     # Sleep Scoring Report - Iteration {config.CURRENT_ITERATION}
 
     ## Model
