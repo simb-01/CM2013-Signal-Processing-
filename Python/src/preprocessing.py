@@ -67,7 +67,7 @@ def preprocess_multi_channel(multi_channel_data, config):
 
     # Process EEG channels (2 channels)
     eeg_data = multi_channel_data['eeg']
-    eeg_fs = 100  # TODO: Get from channel_info
+    eeg_fs = 125  # Actual sampling rate: 125 Hz (TODO: Get from channel_info)
     preprocessed_eeg = np.zeros_like(eeg_data)
 
     for ch in range(eeg_data.shape[1]):
@@ -80,10 +80,10 @@ def preprocess_multi_channel(multi_channel_data, config):
 
     preprocessed_data['eeg'] = preprocessed_eeg
 
-    if config.CURRENT_ITERATION >= 3:
+    if config.CURRENT_ITERATION >= 2:  # EOG starts in iteration 2
         # Process EOG channels (2 channels) - may need different filtering
         eog_data = multi_channel_data['eog']
-        eog_fs = 100  # TODO: Get from channel_info
+        eog_fs = 50  # Actual sampling rate: 50 Hz (TODO: Get from channel_info)
         preprocessed_eog = np.zeros_like(eog_data)
 
         for ch in range(eog_data.shape[1]):
@@ -95,22 +95,24 @@ def preprocess_multi_channel(multi_channel_data, config):
 
         preprocessed_data['eog'] = preprocessed_eog
 
+    if config.CURRENT_ITERATION >= 3:  # EMG starts in iteration 3
         # Process EMG channel (1 channel) - may need higher frequency preservation
         emg_data = multi_channel_data['emg']
-        emg_fs = 200  # TODO: Get from channel_info
+        emg_fs = 125  # Actual sampling rate: 125 Hz (TODO: Get from channel_info)
         preprocessed_emg = np.zeros_like(emg_data)
 
         for epoch in range(emg_data.shape[0]):
             signal = emg_data[epoch, 0, :]
             # EMG needs higher frequency content preserved (muscle activity)
-            filtered_signal = lowpass_filter(signal, 100, emg_fs)  # Higher cutoff for EMG
+            filtered_signal = lowpass_filter(signal, 70, emg_fs)  # Higher cutoff for EMG
             preprocessed_emg[epoch, 0, :] = filtered_signal
 
         preprocessed_data['emg'] = preprocessed_emg
-
         print("Multi-channel preprocessing applied to EEG + EOG + EMG")
+    elif config.CURRENT_ITERATION >= 2:
+        print("Iteration 2: Processing EEG + EOG channels")
     else:
-        print("Early iteration - processing EEG channels only")
+        print("Iteration 1: Processing EEG channels only")
 
     # TODO: Students should add:
     # - Channel-specific artifact removal
@@ -127,7 +129,7 @@ def preprocess_single_channel(data, config):
     """
     if config.CURRENT_ITERATION == 1:
         # EXAMPLE: Very basic low-pass filter (students should expand)
-        fs = 100  # TODO: Get actual sampling rate from data/config
+        fs = 125  # Actual EEG sampling rate: 125 Hz (TODO: Get from data/config)
         preprocessed_data = lowpass_filter(data, config.LOW_PASS_FILTER_FREQ, fs)
 
     elif config.CURRENT_ITERATION == 2:

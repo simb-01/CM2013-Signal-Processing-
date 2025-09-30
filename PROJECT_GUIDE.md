@@ -26,10 +26,9 @@ Develop an automatic sleep scoring system using multi-signal biosignal processin
 ### Key Metrics
 | Metric | Target | Weight |
 |--------|--------|--------|
-| Final Accuracy | 75-80% | 40% |
-| Code Quality | Modular, documented | 20% |
-| Team Collaboration | Regular updates, integration | 20% |
-| Report & Documentation | Clear, comprehensive | 20% |
+| Methodology and Code Quality | Modular design, correct pipeline, documentation, testing | 50% |
+| Team Collaboration | Regular updates, integration, ClickUp usage | 30% |
+| Report & Documentation | Clear technical writing, comprehensive analysis | 20% |
 
 ### Learning Objectives
 - ✅ Apply signal processing techniques to real biomedical data
@@ -222,34 +221,34 @@ gantt
     title Sleep Scoring Project Timeline
     dateFormat  YYYY-MM-DD
     section Iteration 1
-    Sprint Planning       :a1, 2026-10-02, 2d
-    Basic Pipeline Dev    :a2, after a1, 14d
-    Testing & Review      :a3, after a2, 2d
-    
+    Sprint Planning       :a1, 2025-10-20, 3d
+    Basic Pipeline Dev    :a2, after a1, 8d
+    Testing & Review      :a3, 2025-10-31, 1d
+
     section Iteration 2
-    Enhanced EEG Planning :b1, after a3, 2d
+    EEG+EOG Planning      :b1, 2025-11-01, 2d
     Feature Development   :b2, after b1, 14d
-    Integration & Review  :b3, after b2, 2d
-    
+    Integration & Review  :b3, 2025-11-19, 2d
+
     section Iteration 3
-    Multi-Signal Planning :c1, after b3, 2d
-    EOG Integration       :c2, after c1, 14d
-    Testing & Review      :c3, after c2, 2d
-    
+    Multi-Signal Planning :c1, 2025-11-20, 2d
+    EMG Integration       :c2, after c1, 12d
+    Testing & Review      :c3, 2025-12-05, 2d
+
     section Iteration 4
-    Full System Planning  :d1, after c3, 2d
-    Final Development     :d2, after d1, 14d
-    Report & Presentation :d3, after d2, 3d
+    Full System Planning  :d1, 2025-12-06, 2d
+    Final Development     :d2, after d1, 9d
+    Report & Presentation :d3, 2025-12-18, 3d
 ```
 
 ### Iteration Details Table
 
-| Iteration | Weeks | Focus | Signals | Features | Classifier | Target Accuracy | Risk Level |
-|-----------|-------|-------|---------|----------|------------|----------------|------------|
-| **1** | 1-2.5 | Basic Pipeline | EEG | Time (16) | k-NN | 40-60% | Low |
-| **2** | 2.5-5 | Enhanced Processing | EEG | Time+Freq (31) | SVM | 60-70% | Low |
-| **3** | 5-7.5 | Multi-Signal | EEG+EOG | Selected (30) | RF | 70-75% | Medium |
-| **4** | 7.5-10 | Full System | All | Optimized | RF-opt | 75-80% | High |
+| Iteration | Sprint Deadline | Focus | Signals | Features | Classifier | Risk Level |
+|-----------|----------------|-------|---------|----------|------------|------------|
+| **1** | Oct 31, 2025 | Basic Pipeline | EEG | Time (16) | k-NN | Low |
+| **2** | Nov 19, 2025 | Enhanced Processing | EEG+EOG | Time+Freq (31) | SVM | Low |
+| **3** | Dec 5, 2025 | Multi-Signal | EEG+EOG+EMG | Selected (30) | RF | Medium |
+| **4** | Dec 18, 2025 | Full System | All | Optimized | RF-opt | High |
 
 ---
 
@@ -340,13 +339,13 @@ graph TD
 
 ### Iteration Performance Dashboard
 
-| Metric | Iter 1 | Iter 2 | Iter 3 | Iter 4 | Target |
-|--------|--------|--------|--------|--------|--------|
-| **Overall Accuracy** | ___% | ___% | ___% | ___% | 75-80% |
-| **Kappa Score** | ___ | ___ | ___ | ___ | > 0.7 |
-| **F1 Score (Macro)** | ___ | ___ | ___ | ___ | > 0.7 |
-| **Processing Time** | ___s | ___s | ___s | ___s | < 60s |
-| **Features Used** | ___ | ___ | ___ | ___ | 30-50 |
+| Metric | Iter 1 | Iter 2 | Iter 3 | Iter 4 |
+|--------|--------|--------|--------|--------|
+| **Overall Accuracy** | ___% | ___% | ___% | ___% |
+| **Kappa Score** | ___ | ___ | ___ | ___ |
+| **F1 Score (Macro)** | ___ | ___ | ___ | ___ |
+| **Processing Time** | ___s | ___s | ___s | ___s |
+| **Features Used** | ___ | ___ | ___ | ___ |
 
 ### Per-Stage Accuracy Tracking
 
@@ -426,12 +425,13 @@ graph TD
 
 | Term | Definition | Relevance |
 |------|------------|-----------|
-| **EEG** | Electroencephalogram - brain activity | Primary signal for sleep |
-| **EOG** | Electrooculogram - eye movements | Detects REM sleep |
-| **EMG** | Electromyogram - muscle activity | Muscle tone indicator |
+| **EEG** | Electroencephalogram - brain activity | Primary signal for sleep (C3-A2, C4-A1 at 125 Hz) |
+| **EOG** | Electrooculogram - eye movements | Detects REM sleep (Left/Right at 50 Hz) |
+| **EMG** | Electromyogram - muscle activity | Muscle tone indicator (125 Hz) |
+| **ECG** | Electrocardiogram - heart electrical activity | Heart rate variability (125 Hz) |
 | **Epoch** | Fixed time segment | 30-second windows |
 | **Artifact** | Unwanted signal noise | Must be removed |
-| **Bandpass Filter** | Frequency range filter | 0.5-40 Hz for EEG |
+| **Bandpass Filter** | Frequency range filter | 0.15-40 Hz for EEG (hardware high-pass 0.15 Hz) |
 | **Notch Filter** | Removes specific frequency | 50 Hz powerline |
 | **PSD** | Power Spectral Density | Frequency analysis |
 | **Hjorth Parameters** | Time-domain EEG features | Activity, mobility, complexity |
@@ -454,6 +454,62 @@ graph TD
 | **Status** | Task progress | To Do → In Progress → Done |
 | **Comment** | Task discussion | Questions, updates |
 | **@Mention** | Notify teammate | @john need help here |
+
+---
+
+## 📊 Available Signals and Data Format
+
+### Signal Information
+
+The EDF files contain multiple physiological signals recorded at different sampling rates:
+
+| Channel | EDF Label | Input 1 | Input 2 | Sampling Rate (Hz) | Hardware Filters (Hz) | Sensor Type |
+|---------|-----------|---------|---------|-------------------|----------------------|-------------|
+| **Linked EEG** | EEG (sec) | C3 | A2 | 125 | High pass 0.15 | Gold cup electrode |
+| **Linked EEG** | EEG | C4 | A1 | 125 | High pass 0.15 | Gold cup electrode |
+| **Left EOG** | EOG(L) | EOG(L) | PG1 | 50 | High pass 0.15 | Gold cup electrode |
+| **Right EOG** | EOG(R) | EOG(R) | PG1 | 50 | High pass 0.15 | Gold cup electrode |
+| **EMG** | EMG | EMG | - | 125 | High pass 0.15 | Gold cup electrode |
+| **ECG** | ECG | ECG | - | 125 | High pass 0.15 | Ag/AgCl patch |
+| **Thorax** | Thor RES | Thor RES | - | 10 | High pass 0.05 | Respitrace Inductance Plethysmography |
+| **Abdomen** | Abdo RES | Abdo RES | - | 10 | High pass 0.05 | Respitrace Inductance Plethysmography |
+| **Airflow** | New Air | New Air | - | 10 | High pass 0.05 | ProTech thermistor M325 |
+| **Airflow (alt)** | Airflow | Airflow | - | 10 | High pass 0.05 | Compumedics thermistor |
+| **SpO2** | SaO2 | SaO2 | - | 1 | - | Nonin XPOD 3011, 8000 sensor |
+| **Heart Rate** | H.R. | H.R. | - | 1 | - | Nonin XPOD 3011, 8000 sensor |
+| **Position** | Position | Position | - | 1 | High pass 0.05 | Internal mercury gauge |
+| **Light** | Light | Light | - | 1 | - | External ambient light sensor |
+| **Oximetry Status** | OX STAT | OX STAT | - | 1 | - | Nonin XPOD 3011, 8000 sensor |
+
+### Key Signals for Sleep Scoring
+
+**Primary Signals (Most Important):**
+- **EEG (C3-A2, C4-A1)**: Brain activity patterns, primary for sleep stage classification (125 Hz)
+- **EOG (Left/Right)**: Eye movements, essential for detecting REM sleep (50 Hz)
+- **EMG**: Muscle tone indicator for sleep stages (125 Hz)
+
+**Secondary Signals (Complementary Information):**
+- **ECG**: Heart rate variability analysis (125 Hz)
+- **Respiration (Thorax/Abdomen)**: Breathing patterns (10 Hz)
+- **SpO2 & Heart Rate**: Oxygen saturation and pulse (1 Hz)
+- **Airflow**: Breathing flow detection (10 Hz)
+
+### Important Notes on Signal Processing
+
+**Hardware Filtering:**
+- EEG, EOG, EMG, ECG signals have hardware high-pass filter at **0.15 Hz**
+- Respiration signals have hardware high-pass filter at **0.05 Hz**
+- Consider these when designing additional filtering stages
+
+**Sampling Rate Considerations:**
+- Different signals have different sampling rates (1-125 Hz)
+- You may need to resample or process at native rates
+- 30-second epochs translate to different numbers of samples per signal
+
+**Data Format:**
+- EDF format stores all signals with metadata
+- XML files contain sleep stage annotations (30-second epochs)
+- Sleep stages: Wake, N1, N2, N3, REM
 
 ---
 
@@ -548,10 +604,10 @@ Please note that groups are composed of 3 members. As there are 4 main roles in 
     *   **MANDATORY:** Add instructor as viewer: `[instructor.email@university.edu]`
 
 2.  **Create Sprint Folders**
-    *   📁 Iteration 1: MVP (Week 1-2.5)
-    *   📁 Iteration 2: Core EEG (Week 2.5-5)
-    *   📁 Iteration 3: Multi-Signal (Week 5-7.5)
-    *   📁 Iteration 4: Full System (Week 7.5-10)
+    *   📁 Iteration 1: Basic EEG (Due: Oct 31, 2025)
+    *   📁 Iteration 2: EEG+EOG (Due: Nov 19, 2025)
+    *   📁 Iteration 3: EEG+EOG+EMG (Due: Dec 5, 2025)
+    *   📁 Iteration 4: Full System (Due: Dec 18, 2025)
     *   📁 Project Management (Ongoing)
 
 #### Task Organization
@@ -683,10 +739,10 @@ Create the following essential tags:
 
 The instructor will review your ClickUp at:
 
-*   End of Week 2 (Iteration 1 complete)
-*   End of Week 5 (Iteration 2 complete)
-*   End of Week 7 (Iteration 3 complete)
-*   End of Week 10 (Final delivery)
+*   **October 31, 2025** (Iteration 1 complete)
+*   **November 19, 2025** (Iteration 2 complete)
+*   **December 5, 2025** (Iteration 3 complete)
+*   **December 18, 2025** (Final delivery)
 
 **Instructor Access:** Ensure `[instructor.email@university.edu]` has viewer access from Day 1.
 

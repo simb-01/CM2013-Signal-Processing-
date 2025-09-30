@@ -43,29 +43,34 @@ def load_training_data(edf_file_path, xml_file_path):
     # Realistic size for jumpstart: 2 hours = 2 * 60 * 2 = 240 epochs
     # Real studies are 6-8 hours (720-960 epochs) but 240 is good for development
     n_epochs = 240  # 2 hours of sleep recording for development/testing
-    n_samples = 30 * 100  # 30 seconds at 100 Hz (EEG typical sampling rate)
 
-    # NOTE FOR STUDENTS: This study has specific multi-channel setup:
-    # - 2 EEG channels (e.g., C3-A2, C4-A1) typically at 256 Hz
-    # - 2 EOG channels (e.g., LOC-A2, ROC-A1) typically at 256 Hz
-    # - 1 EMG channel (e.g., Chin1-Chin2) often at 512 Hz
-    # - Other signals: airflow, thoracic, abdominal, etc.
+    # NOTE FOR STUDENTS: This study has specific multi-channel setup with ACTUAL sampling rates:
+    # - 2 EEG channels (C3-A2, C4-A1) at 125 Hz
+    # - 2 EOG channels (EOG(L), EOG(R)) at 50 Hz
+    # - 1 EMG channel at 125 Hz
+    # - ECG at 125 Hz
+    # - Other signals: Respiration (10 Hz), SpO2/HR (1 Hz), etc.
     # Students must identify channels by name and handle different sampling rates
 
-    # Generate realistic dummy multi-channel data
+    # Calculate samples per epoch for each signal type
+    eeg_samples = 30 * 125  # 30 seconds at 125 Hz = 3750 samples
+    eog_samples = 30 * 50   # 30 seconds at 50 Hz = 1500 samples
+    emg_samples = 30 * 125  # 30 seconds at 125 Hz = 3750 samples
+
+    # Generate realistic dummy multi-channel data with CORRECT sampling rates
     multi_channel_data = {
-        'eeg': np.random.randn(n_epochs, 2, n_samples),  # 2 EEG channels
-        'eog': np.random.randn(n_epochs, 2, n_samples),  # 2 EOG channels
-        'emg': np.random.randn(n_epochs, 1, n_samples * 2),  # 1 EMG channel (higher rate)
+        'eeg': np.random.randn(n_epochs, 2, eeg_samples),  # 2 EEG channels at 125 Hz
+        'eog': np.random.randn(n_epochs, 2, eog_samples),  # 2 EOG channels at 50 Hz
+        'emg': np.random.randn(n_epochs, 1, emg_samples),  # 1 EMG channel at 125 Hz
     }
 
     channel_info = {
         'eeg_names': ['C3-A2', 'C4-A1'],
-        'eeg_fs': 100,  # Dummy rate for testing
-        'eog_names': ['LOC-A2', 'ROC-A1'],
-        'eog_fs': 100,
-        'emg_names': ['Chin1-Chin2'],
-        'emg_fs': 200,  # Higher rate for EMG
+        'eeg_fs': 125,  # Actual sampling rate from study
+        'eog_names': ['EOG(L)', 'EOG(R)'],
+        'eog_fs': 50,   # Actual sampling rate from study
+        'emg_names': ['EMG'],
+        'emg_fs': 125,  # Actual sampling rate from study
         'epoch_length': 30
     }
 
@@ -113,19 +118,24 @@ def load_holdout_data(edf_file_path):
     # DUMMY DATA for jumpstart testing - students must replace:
     print("WARNING: Using dummy data! Students must implement actual EDF loading.")
     n_epochs = 240  # 2 hours for development (real studies: 720-960 epochs)
-    n_samples = 30 * 100  # 30 seconds at 100 Hz
 
-    # Multi-channel holdout data
+    # Calculate samples per epoch with CORRECT sampling rates
+    eeg_samples = 30 * 125  # 30 seconds at 125 Hz = 3750 samples
+    eog_samples = 30 * 50   # 30 seconds at 50 Hz = 1500 samples
+    emg_samples = 30 * 125  # 30 seconds at 125 Hz = 3750 samples
+
+    # Multi-channel holdout data with CORRECT sampling rates
     multi_channel_data = {
-        'eeg': np.random.randn(n_epochs, 2, n_samples),  # 2 EEG channels
-        'eog': np.random.randn(n_epochs, 2, n_samples),  # 2 EOG channels
-        'emg': np.random.randn(n_epochs, 1, n_samples * 2),  # 1 EMG channel (higher rate)
+        'eeg': np.random.randn(n_epochs, 2, eeg_samples),  # 2 EEG channels at 125 Hz
+        'eog': np.random.randn(n_epochs, 2, eog_samples),  # 2 EOG channels at 50 Hz
+        'emg': np.random.randn(n_epochs, 1, emg_samples),  # 1 EMG channel at 125 Hz
     }
 
     record_info = {
         'record_id': 1,
         'n_epochs': n_epochs,
-        'channels': ['C3-A2', 'C4-A1', 'LOC-A2', 'ROC-A1', 'Chin1-Chin2']
+        'channels': ['C3-A2', 'C4-A1', 'EOG(L)', 'EOG(R)', 'EMG'],
+        'sampling_rates': {'eeg': 125, 'eog': 50, 'emg': 125}
     }
     print(f"Generated dummy multi-channel holdout data: {n_epochs} epochs ({n_epochs/120:.1f} hours)")
 
@@ -186,11 +196,13 @@ def create_30_second_epochs(raw_data):
     TODO: STUDENT IMPLEMENTATION - Segment continuous data into 30-second epochs.
 
     Important considerations for students:
-    1. Handle different sampling rates for different signal types:
-       - EEG: 100-512 Hz (typical: 256 Hz)
-       - ECG: 256-512 Hz
-       - EOG: 100-256 Hz
-       - EMG: 256-512 Hz
+    1. Handle different sampling rates for different signal types (ACTUAL rates for this study):
+       - EEG (C3-A2, C4-A1): 125 Hz
+       - EOG (Left, Right): 50 Hz
+       - EMG: 125 Hz
+       - ECG: 125 Hz
+       - Respiration (Thor/Abdo): 10 Hz
+       - SpO2/Heart Rate: 1 Hz
 
     2. Options for handling multiple sampling rates:
        - Resample all signals to common rate (e.g., 100 Hz)

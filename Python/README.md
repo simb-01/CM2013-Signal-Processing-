@@ -60,9 +60,9 @@ python main.py
 **First Run Results**:
 - ✅ Configuration loads successfully
 - ✅ Multi-channel dummy data is loaded (240 epochs, 2 hours):
-  - 2 EEG channels (C3-A2, C4-A1) at 100 Hz (3000 samples/epoch)
-  - 2 EOG channels (LOC-A2, ROC-A1) at 100 Hz (3000 samples/epoch)
-  - 1 EMG channel (Chin1-Chin2) at 200 Hz (6000 samples/epoch)
+  - 2 EEG channels (C3-A2, C4-A1) at 125 Hz (3750 samples/epoch)
+  - 2 EOG channels (EOG(L), EOG(R)) at 50 Hz (1500 samples/epoch)
+  - 1 EMG channel at 125 Hz (3750 samples/epoch)
 - ✅ Basic preprocessing applies simple lowpass filters
 - ⚠️ Feature extraction only produces 6 features (2 EEG channels × 3 features each)
 - ⚠️ Students must implement 13+ additional time-domain features per EEG channel
@@ -73,11 +73,13 @@ python main.py
 1. **Multi-Channel Data Loading**:
    - Real EDF/XML file parsing for R1.edf/R1.xml format
    - Handle 2 EEG + 2 EOG + 1 EMG channels with different sampling rates
-   - Channel identification by name patterns (C3, C4, LOC, ROC, Chin, etc.)
+   - Channel identification by name patterns (C3-A2, C4-A1, EOG(L), EOG(R), EMG)
+   - **Actual sampling rates**: EEG 125 Hz, EOG 50 Hz, EMG 125 Hz
 2. **Multi-Channel Preprocessing**:
    - Different filtering for each signal type (EEG, EOG, EMG)
    - Cross-channel artifact detection and removal
    - Sampling rate harmonization or native-rate processing
+   - Note: Hardware high-pass filters already applied (0.15 Hz for EEG/EOG/EMG)
 3. **Comprehensive Feature Extraction**:
    - 13+ additional time-domain features per channel (Hjorth parameters, etc.)
    - Signal-specific features (eye movements for EOG, muscle tone for EMG)
