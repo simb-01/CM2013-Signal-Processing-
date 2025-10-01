@@ -1,4 +1,4 @@
-function predictions = inference_make_inference(model, holdout_data, config)
+function predictions = inference_make_inference(model, holdout_data)
 %% Makes predictions on the hold-out data using the trained model.
 
 fprintf('Making inference on hold-out data...\n');

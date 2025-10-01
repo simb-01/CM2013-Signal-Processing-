@@ -5,6 +5,9 @@ clc;
 close all;
 clearvars -except config;
 
+% Add src directory and subdirectories to path
+addpath(genpath('src'));
+
 % Load configuration
 run('config.m'); % This will load config variables into the workspace
 

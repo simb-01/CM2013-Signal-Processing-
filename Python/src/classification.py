@@ -118,8 +118,8 @@ def print_performance_metrics(y_true, y_pred):
     Includes accuracy, sensitivity (recall), specificity, and F1-score for each sleep stage.
     """
 
-    # Sleep stage labels and names
-    stage_names = ['REM', 'N3', 'N2', 'N1', 'Wake']
+    # Sleep stage labels and names (0=Wake, 1=N1, 2=N2, 3=N3, 4=REM)
+    stage_names = ['Wake', 'N1', 'N2', 'N3', 'REM']
     stage_labels = list(range(5))
 
     print("\n" + "="*70)

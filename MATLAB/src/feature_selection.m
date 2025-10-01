@@ -1,4 +1,4 @@
-function selected_features = feature_selection_select_features(features, labels, config)
+function selected_features = feature_selection_select_features(features, labels)
 %% Selects the most relevant features.
 % For the jumpstart, this is a placeholder.
 

@@ -40,6 +40,13 @@ To run the full pipeline (data loading, preprocessing, feature extraction, class
     main
     ```
 
+**Note:** The jumpstart code uses dummy data with correct sampling rates:
+- EEG: 125 Hz (3,750 samples per 30-second epoch)
+- EOG: 50 Hz (1,500 samples per 30-second epoch)
+- EMG: 125 Hz (3,750 samples per 30-second epoch)
+
+Students must implement real EDF/XML loading to use actual data files.
+
 ### 4. Running Inference and Generating Submission File
 
 After training your model using `main.m`, you can run inference on the hold-out data and generate a `submission.csv` file:
@@ -74,6 +81,18 @@ This project follows an agile, iterative development approach as outlined in the
 ### EDF File Format
 
 EDF (European Data Format) is a standard file format for storing physiological and biological signals. It can store multiple signals (e.g., EEG, EOG, EMG) and includes metadata like sampling frequency and channel names. Sleep stages are typically labeled for every 30-second epoch.
+
+**Actual Sampling Rates in Study Data:**
+- EEG (C3-A2, C4-A1): 125 Hz
+- EOG (EOG(L), EOG(R)): 50 Hz
+- EMG: 125 Hz
+- ECG: 125 Hz
+- Respiration (Thor/Abdo): 10 Hz
+- SpO2/Heart Rate: 1 Hz
+
+**Hardware Filters Already Applied:**
+- EEG/EOG/EMG/ECG: High-pass 0.15 Hz
+- Respiration: High-pass 0.05 Hz
 
 To read EDF files in MATLAB, the `edfread` function is available. **Note:** The provided EDF files might not be compatible with the built-in `edfread` in MATLAB. You should use the `edfread` function provided in this module (if available) or a custom implementation.
 

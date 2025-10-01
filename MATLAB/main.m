@@ -5,6 +5,9 @@ clc;
 close all;
 clearvars -except config;
 
+% Add src directory and subdirectories to path
+addpath(genpath('src'));
+
 % Load configuration
 run('config.m'); % This will load config variables into the workspace
 
@@ -36,7 +39,7 @@ if USE_CACHE
 end
 
 if isempty(preprocessed_data)
-    preprocessed_data = preprocess(eeg_data, config);
+    preprocessed_data = preprocess(eeg_data);
     if USE_CACHE
         save_cache(preprocessed_data, cache_filename_preprocess, CACHE_DIR);
     end
@@ -50,27 +53,27 @@ if USE_CACHE
 end
 
 if isempty(features)
-    features = extract_features(preprocessed_data, config);
+    features = extract_features(preprocessed_data);
     if USE_CACHE
         save_cache(features, cache_filename_features, CACHE_DIR);
     end
 end
 
 % 4. Feature Selection
-selected_features = select_features(features, labels, config);
+selected_features = select_features(features, labels);
 
 % 5. Classification
-model = train_classifier(selected_features, labels, config);
+model = train_classifier(selected_features, labels);
 
 % Save the trained model for inference
 model_filename = sprintf('model_iter%d.mat', CURRENT_ITERATION);
 save_cache(model, model_filename, CACHE_DIR);
 
 % 6. Visualization
-visualize_results(model, selected_features, labels, config);
+visualize_results(model, selected_features, labels);
 
 % 7. Report Generation
-generate_report(model, selected_features, labels, config);
+generate_report(model, selected_features, labels);
 
 fprintf('--- Pipeline Finished ---\n');
 

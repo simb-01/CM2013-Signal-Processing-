@@ -1,4 +1,4 @@
-function model = train_classifier(features, labels, config)
+function model = train_classifier(features, labels)
 %% STUDENT IMPLEMENTATION AREA: Train classifier based on iteration.
 %
 % This function provides a basic framework but students should enhance it:
@@ -9,7 +9,18 @@ function model = train_classifier(features, labels, config)
 % 4. Add more sophisticated evaluation metrics
 % 5. Consider ensemble methods in later iterations
 
-fprintf('Training %s classifier...\n', config.CLASSIFIER_TYPE);
+% Get config variables from caller's workspace
+try
+    CURRENT_ITERATION = evalin('caller', 'CURRENT_ITERATION');
+    CLASSIFIER_TYPE = evalin('caller', 'CLASSIFIER_TYPE');
+    KNN_N_NEIGHBORS = evalin('caller', 'KNN_N_NEIGHBORS');
+catch
+    CURRENT_ITERATION = 1;
+    CLASSIFIER_TYPE = 'knn';
+    KNN_N_NEIGHBORS = 5;
+end
+
+fprintf('Training %s classifier...\n', CLASSIFIER_TYPE);
 fprintf('Features shape: [%d, %d], Labels length: %d\n', size(features), length(labels));
 
 % Basic validation
@@ -35,41 +46,43 @@ fprintf('Training set: %d samples, Test set: %d samples\n', size(X_train, 1), si
 % - Consider SMOTE, class weights, or other techniques
 
 % Select classifier based on iteration (using config parameters)
-if config.CURRENT_ITERATION == 1
+if CURRENT_ITERATION == 1
     % Iteration 1: Simple k-NN
-    model = fitcknn(X_train, y_train, 'NumNeighbors', config.KNN_N_NEIGHBORS);
-    fprintf('Using k-NN with k=%d\n', config.KNN_N_NEIGHBORS);
+    model = fitcknn(X_train, y_train, 'NumNeighbors', KNN_N_NEIGHBORS);
+    fprintf('Using k-NN with k=%d\n', KNN_N_NEIGHBORS);
 
-elseif config.CURRENT_ITERATION == 2
+elseif CURRENT_ITERATION == 2
     % Iteration 2: SVM
     % TODO: Students should tune hyperparameters
-    if isfield(config, 'SVM_KERNEL_SCALE')
-        model = fitcsvm(X_train, y_train, 'KernelScale', config.SVM_KERNEL_SCALE);
-    else
+    try
+        SVM_KERNEL_SCALE = evalin('caller', 'SVM_KERNEL_SCALE');
+        model = fitcsvm(X_train, y_train, 'KernelScale', SVM_KERNEL_SCALE);
+    catch
         model = fitcsvm(X_train, y_train);
     end
     fprintf('Using SVM\n');
 
-elseif config.CURRENT_ITERATION >= 3
+elseif CURRENT_ITERATION >= 3
     % Iteration 3+: Random Forest
     % TODO: Students should tune hyperparameters
-    if isfield(config, 'RF_N_TREES')
-        n_trees = config.RF_N_TREES;
-    else
+    try
+        RF_N_TREES = evalin('caller', 'RF_N_TREES');
+        n_trees = RF_N_TREES;
+    catch
         n_trees = 100;
     end
     model = TreeBagger(n_trees, X_train, y_train, 'Method', 'classification');
     fprintf('Using Random Forest with %d trees\n', n_trees);
 
 else
-    error('Invalid iteration: %d', config.CURRENT_ITERATION);
+    error('Invalid iteration: %d', CURRENT_ITERATION);
 end
 
 % Train the model (already done in fitc* functions for MATLAB)
 fprintf('Training model...\n');
 
 % Comprehensive evaluation with detailed performance metrics
-if config.CURRENT_ITERATION >= 3 && isa(model, 'TreeBagger')
+if CURRENT_ITERATION >= 3 && isa(model, 'TreeBagger')
     y_pred_cell = predict(model, X_test);
     y_pred = str2double(y_pred_cell); % Convert cell to numeric
 else
@@ -97,8 +110,8 @@ function print_performance_metrics(y_true, y_pred)
 %
 % Includes accuracy, sensitivity (recall), specificity, and F1-score for each sleep stage.
 
-% Sleep stage labels and names
-stage_names = {'REM', 'N3', 'N2', 'N1', 'Wake'};
+% Sleep stage labels and names (0=Wake, 1=N1, 2=N2, 3=N3, 4=REM)
+stage_names = {'Wake', 'N1', 'N2', 'N3', 'REM'};
 stage_labels = 0:4;
 
 fprintf('\n%s\n', repmat('=', 1, 70));

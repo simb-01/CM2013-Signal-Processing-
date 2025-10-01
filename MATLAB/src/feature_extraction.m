@@ -1,4 +1,4 @@
-function features = extract_features(data, config)
+function features = extract_features(data)
 %% STUDENT IMPLEMENTATION AREA: Extract features based on current iteration.
 %
 % This function should handle both single-channel (old format) and
@@ -9,21 +9,28 @@ function features = extract_features(data, config)
 % Iteration 3: Multi-signal features (EEG + EOG + EMG)
 % Iteration 4: Optimized feature set (selected subset)
 
-fprintf('Extracting features for iteration %d...\n', config.CURRENT_ITERATION);
+% Get CURRENT_ITERATION from caller's workspace
+try
+    CURRENT_ITERATION = evalin('caller', 'CURRENT_ITERATION');
+catch
+    CURRENT_ITERATION = 1; % Default
+end
+
+fprintf('Extracting features for iteration %d...\n', CURRENT_ITERATION);
 
 % Detect if we have multi-channel data structure
 if isstruct(data) && isfield(data, 'eeg')
     fprintf('Processing multi-channel data (EEG + EOG + EMG)\n');
-    features = extract_multi_channel_features(data, config);
+    features = extract_multi_channel_features(data, CURRENT_ITERATION);
 else
     fprintf('Processing single-channel data (backward compatibility)\n');
-    features = extract_single_channel_features(data, config);
+    features = extract_single_channel_features(data, CURRENT_ITERATION);
 end
 
 end
 
 
-function features = extract_multi_channel_features(multi_channel_data, config)
+function features = extract_multi_channel_features(multi_channel_data, CURRENT_ITERATION)
 %% Extract features from multi-channel data: 2 EEG + 2 EOG + 1 EMG channels.
 % Students should expand this significantly!
 
@@ -40,7 +47,7 @@ for epoch_idx = 1:n_epochs
         epoch_features = [epoch_features, eeg_features];
     end
 
-    if config.CURRENT_ITERATION >= 3
+    if CURRENT_ITERATION >= 3
         % Add EOG features (2 channels)
         for ch = 1:size(multi_channel_data.eog, 2)
             eog_signal = squeeze(multi_channel_data.eog(epoch_idx, ch, :));
@@ -59,11 +66,11 @@ end
 
 features = all_features;
 
-if config.CURRENT_ITERATION == 1
+if CURRENT_ITERATION == 1
     expected = 2 * 3; % 2 EEG channels × 3 features each
     fprintf('Multi-channel Iteration 1: %d features (target: %d+)\n', size(features, 2), expected);
     fprintf('Students must implement remaining 13 time-domain features per EEG channel!\n');
-elseif config.CURRENT_ITERATION >= 3
+elseif CURRENT_ITERATION >= 3
     fprintf('Multi-channel features extracted: %d total\n', size(features, 2));
     fprintf('(2 EEG + 2 EOG + 1 EMG channels)\n');
 end
@@ -71,10 +78,10 @@ end
 end
 
 
-function features = extract_single_channel_features(data, config)
+function features = extract_single_channel_features(data, CURRENT_ITERATION)
 %% Backward compatibility for single-channel data.
 
-if config.CURRENT_ITERATION == 1
+if CURRENT_ITERATION == 1
     % Iteration 1: Time-domain features (TARGET: 16 features)
     % CURRENT: Only 3 features implemented - students must add 13 more!
     all_features = [];
@@ -88,19 +95,19 @@ if config.CURRENT_ITERATION == 1
     fprintf('WARNING: Only %d features extracted, target is 16 for iteration 1\n', size(features, 2));
     fprintf('Students must implement the remaining time-domain features!\n');
 
-elseif config.CURRENT_ITERATION == 2
+elseif CURRENT_ITERATION == 2
     % TODO: Students must implement frequency-domain features
     fprintf('TODO: Students must implement frequency-domain feature extraction\n');
     fprintf('Target: ~31 features (time + frequency domain)\n');
     features = zeros(size(data, 1), 0); % Empty features - students must implement
 
-elseif config.CURRENT_ITERATION >= 3
+elseif CURRENT_ITERATION >= 3
     % TODO: Students must implement multi-signal features
     fprintf('TODO: Students should use multi-channel data format for iteration 3+\n');
     features = zeros(size(data, 1), 0); % Empty features - students must implement
 
 else
-    error('Invalid iteration: %d', config.CURRENT_ITERATION);
+    error('Invalid iteration: %d', CURRENT_ITERATION);
 end
 
 end
