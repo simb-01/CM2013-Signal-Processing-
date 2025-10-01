@@ -45,6 +45,10 @@ def plot_sample_epoch(edf_path, epoch_idx=0, epoch_duration=30):
         return
 
     try:
+        # Reset matplotlib to defaults
+        import matplotlib
+        matplotlib.rcdefaults()
+
         # Calculate epoch boundaries
         start_time = epoch_idx * epoch_duration
 
@@ -54,17 +58,15 @@ def plot_sample_epoch(edf_path, epoch_idx=0, epoch_duration=30):
 
             n_channels = len(raw.ch_names)
             channel_labels = raw.ch_names
-            sampling_freqs = [raw.info['sfreq']] * n_channels  # MNE resamples to common rate
 
             # Extract data for this epoch
             start_sample = int(start_time * raw.info['sfreq'])
             stop_sample = int((start_time + epoch_duration) * raw.info['sfreq'])
-            data, times = raw[:, start_sample:stop_sample]
-            times = times + start_time  # Offset to epoch start time
 
             # Convert from Volts to microvolts for better visualization
             # MNE loads data in Volts by default
-            data = data * 1e6
+            data_all = raw[:, start_sample:stop_sample][0] * 1e6
+            times = np.arange(data_all.shape[1]) / raw.info['sfreq'] + start_time
 
         else:
             # Fallback to pyedflib
@@ -73,20 +75,20 @@ def plot_sample_epoch(edf_path, epoch_idx=0, epoch_duration=30):
                 channel_labels = edf.getSignalLabels()
                 sampling_freqs = [edf.getSampleFrequency(i) for i in range(n_channels)]
 
-                data = []
+                data_all = []
                 for ch_idx in range(n_channels):
                     fs = sampling_freqs[ch_idx]
                     start_sample = int(start_time * fs)
                     n_samples = int(epoch_duration * fs)
                     signal = edf.readSignal(ch_idx, start=start_sample, n=n_samples)
-                    data.append(signal)
+                    data_all.append(signal)
 
                 # Create time axis
-                max_samples = max(len(d) for d in data)
+                max_samples = max(len(d) for d in data_all)
                 times = np.linspace(start_time, start_time + epoch_duration, max_samples)
 
-        # Create subplots for each channel
-        fig, axes = plt.subplots(n_channels, 1, figsize=(15, 2*n_channels), sharex=True,
+        # Create subplots - EXACTLY like the diagnostic plot that worked
+        fig, axes = plt.subplots(n_channels, 1, figsize=(14, 2*n_channels),
                                 facecolor='white', edgecolor='black')
         if n_channels == 1:
             axes = [axes]
@@ -98,42 +100,48 @@ def plot_sample_epoch(edf_path, epoch_idx=0, epoch_duration=30):
             label = channel_labels[ch_idx]
 
             if HAS_MNE:
-                signal = data[ch_idx]
-                fs = sampling_freqs[ch_idx]
-                time_axis = times
+                signal = data_all[ch_idx]
             else:
-                signal = data[ch_idx]
-                fs = sampling_freqs[ch_idx]
-                time_axis = np.arange(len(signal)) / fs + start_time
+                signal = data_all[ch_idx]
 
-            # Set white background for subplot
+            # Set white background for subplot - EXACTLY like diagnostic
             axes[ch_idx].set_facecolor('white')
 
-            # Plot signal with thick blue line
-            axes[ch_idx].plot(time_axis, signal, 'b-', linewidth=2.0, solid_capstyle='round')
+            # Plot with VERY visible settings - EXACTLY like diagnostic
+            axes[ch_idx].plot(times, signal, 'b-', linewidth=2.0, solid_capstyle='round')
 
             # Add unit to ylabel for bio-signal channels
             if 'EEG' in label or 'EOG' in label or 'EMG' in label or 'ECG' in label:
-                ylabel = f'{label}\n(µV, {int(fs)} Hz)'
+                ylabel = f'{label} (µV)'
             else:
-                ylabel = f'{label}\n({int(fs)} Hz)'
+                ylabel = f'{label}'
 
-            axes[ch_idx].set_ylabel(ylabel, fontsize=10, fontweight='bold')
+            axes[ch_idx].set_ylabel(ylabel, fontsize=11, fontweight='bold')
             axes[ch_idx].grid(True, color='gray', alpha=0.4, linestyle='-', linewidth=0.5)
-            axes[ch_idx].set_xlim(start_time, start_time + epoch_duration)
+            axes[ch_idx].set_xlim(times[0], times[-1])
 
-            # Set y-axis limits with margin
-            y_min, y_max = signal.min(), signal.max()
-            y_range = y_max - y_min
-            margin = max(y_range * 0.15, 0.1)  # At least 0.1 unit margin
-            axes[ch_idx].set_ylim(y_min - margin, y_max + margin)
+            # Explicit y-limits - EXACTLY like diagnostic
+            y_margin = (signal.max() - signal.min()) * 0.15
+            axes[ch_idx].set_ylim(signal.min() - y_margin, signal.max() + y_margin)
 
-            print(f"  {label}: {int(fs)} Hz, {len(signal)} samples, range=[{y_min:.1f}, {y_max:.1f}]")
+            # Add text showing we have data - EXACTLY like diagnostic
+            axes[ch_idx].text(0.98, 0.95, f'n={len(signal)}', transform=axes[ch_idx].transAxes,
+                            ha='right', va='top', fontsize=8,
+                            bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7))
+
+            print(f"  {label}: {len(signal)} samples, range=[{signal.min():.1f}, {signal.max():.1f}]")
 
         axes[-1].set_xlabel('Time (seconds)', fontsize=12, fontweight='bold')
-        axes[0].set_title(f'Sleep Signals - Epoch {epoch_idx} ({epoch_duration}s window)', fontsize=14, fontweight='bold')
+        axes[0].set_title(f'Sleep Signals - Epoch {epoch_idx} ({epoch_duration}s window)',
+                         fontsize=14, fontweight='bold')
 
         plt.tight_layout()
+
+        # Save figure explicitly before showing
+        output_path = f"epoch{epoch_idx}_signals.png"
+        plt.savefig(output_path, dpi=100, facecolor='white', edgecolor='black', bbox_inches='tight')
+        print(f"\n✓ Saved to {output_path}")
+
         plt.show()
 
     except FileNotFoundError:
