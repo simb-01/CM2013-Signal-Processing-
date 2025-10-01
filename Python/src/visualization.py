@@ -50,7 +50,7 @@ def plot_sample_epoch(edf_path, epoch_idx=0, epoch_duration=30):
 
         if HAS_MNE:
             # Use MNE (more lenient with EDF format issues)
-            raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+            raw = mne.io.read_raw_edf(edf_path, preload=True, stim_channel=None, verbose=False)
 
             n_channels = len(raw.ch_names)
             channel_labels = raw.ch_names
@@ -61,6 +61,10 @@ def plot_sample_epoch(edf_path, epoch_idx=0, epoch_duration=30):
             stop_sample = int((start_time + epoch_duration) * raw.info['sfreq'])
             data, times = raw[:, start_sample:stop_sample]
             times = times + start_time  # Offset to epoch start time
+
+            # Convert from Volts to microvolts for better visualization
+            # MNE loads data in Volts by default
+            data = data * 1e6
 
         else:
             # Fallback to pyedflib
@@ -82,7 +86,8 @@ def plot_sample_epoch(edf_path, epoch_idx=0, epoch_duration=30):
                 times = np.linspace(start_time, start_time + epoch_duration, max_samples)
 
         # Create subplots for each channel
-        fig, axes = plt.subplots(n_channels, 1, figsize=(15, 2*n_channels), sharex=True)
+        fig, axes = plt.subplots(n_channels, 1, figsize=(15, 2*n_channels), sharex=True,
+                                facecolor='white', edgecolor='black')
         if n_channels == 1:
             axes = [axes]
 
@@ -101,15 +106,31 @@ def plot_sample_epoch(edf_path, epoch_idx=0, epoch_duration=30):
                 fs = sampling_freqs[ch_idx]
                 time_axis = np.arange(len(signal)) / fs + start_time
 
-            # Plot signal
-            axes[ch_idx].plot(time_axis, signal, linewidth=0.5)
-            axes[ch_idx].set_ylabel(f'{label}\n({int(fs)} Hz)', fontsize=10)
-            axes[ch_idx].grid(True, alpha=0.3)
+            # Set white background for subplot
+            axes[ch_idx].set_facecolor('white')
+
+            # Plot signal with thick blue line
+            axes[ch_idx].plot(time_axis, signal, 'b-', linewidth=2.0, solid_capstyle='round')
+
+            # Add unit to ylabel for bio-signal channels
+            if 'EEG' in label or 'EOG' in label or 'EMG' in label or 'ECG' in label:
+                ylabel = f'{label}\n(µV, {int(fs)} Hz)'
+            else:
+                ylabel = f'{label}\n({int(fs)} Hz)'
+
+            axes[ch_idx].set_ylabel(ylabel, fontsize=10, fontweight='bold')
+            axes[ch_idx].grid(True, color='gray', alpha=0.4, linestyle='-', linewidth=0.5)
             axes[ch_idx].set_xlim(start_time, start_time + epoch_duration)
 
-            print(f"  {label}: {int(fs)} Hz, {len(signal)} samples")
+            # Set y-axis limits with margin
+            y_min, y_max = signal.min(), signal.max()
+            y_range = y_max - y_min
+            margin = max(y_range * 0.15, 0.1)  # At least 0.1 unit margin
+            axes[ch_idx].set_ylim(y_min - margin, y_max + margin)
 
-        axes[-1].set_xlabel('Time (seconds)', fontsize=12)
+            print(f"  {label}: {int(fs)} Hz, {len(signal)} samples, range=[{y_min:.1f}, {y_max:.1f}]")
+
+        axes[-1].set_xlabel('Time (seconds)', fontsize=12, fontweight='bold')
         axes[0].set_title(f'Sleep Signals - Epoch {epoch_idx} ({epoch_duration}s window)', fontsize=14, fontweight='bold')
 
         plt.tight_layout()
@@ -166,8 +187,6 @@ def plot_hypnogram(xml_path, edf_path=None):
                     start_time = float(start.text)
                     dur = float(duration.text) if duration is not None else 30.0
 
-                    epochs.append(start_time / 30.0)  # Convert to epoch number
-
                     # Map stage names to numeric labels (0=Wake, 1=N1, 2=N2, 3=N3, 4=REM)
                     stage_label = None
 
@@ -183,16 +202,16 @@ def plot_hypnogram(xml_path, edf_path=None):
                         stage_label = 4
 
                     if stage_label is not None:
-                        stages.append(stage_label)
+                        # Store start time, duration, and stage label
+                        epochs.append((start_time, dur, stage_label))
 
         if not epochs:
             print("Warning: No sleep stage annotations found in XML file")
             print("The XML file may be in a different format or empty")
             return
 
-        # Convert to numpy arrays
-        epochs = np.array(epochs)
-        stages = np.array(stages)
+        # Sort epochs by start time
+        epochs = sorted(epochs, key=lambda x: x[0])
 
         # Create hypnogram plot
         fig, ax = plt.subplots(figsize=(15, 5))
@@ -201,17 +220,16 @@ def plot_hypnogram(xml_path, edf_path=None):
         stage_names = ['Wake', 'N1', 'N2', 'N3', 'REM']
         stage_colors = ['red', 'orange', 'green', 'blue', 'purple']
 
-        # Create step plot
-        for i in range(len(epochs)):
-            # Draw horizontal line for this epoch
-            if i < len(epochs) - 1:
-                # Use next epoch as end point
-                ax.hlines(stages[i], epochs[i], epochs[i+1],
-                         colors=stage_colors[int(stages[i])], linewidth=2)
-            else:
-                # Last epoch - extend by one epoch duration (30s)
-                ax.hlines(stages[i], epochs[i], epochs[i] + 1,
-                         colors=stage_colors[int(stages[i])], linewidth=2)
+        # Create step plot - each event has (start_time, duration, stage_label)
+        for start_time, duration, stage_label in epochs:
+            start_epoch = start_time / 30.0
+            end_epoch = (start_time + duration) / 30.0
+            ax.hlines(stage_label, start_epoch, end_epoch,
+                     colors=stage_colors[int(stage_label)], linewidth=2)
+
+        # Extract stages for statistics
+        stages = np.array([e[2] for e in epochs])
+        total_duration = sum(e[1] for e in epochs)
 
         # Styling
         ax.set_yticks(range(5))
@@ -227,7 +245,7 @@ def plot_hypnogram(xml_path, edf_path=None):
         ax2.set_xlim(ax.get_xlim())
         ax2.set_xlabel('Time (hours)', fontsize=12, fontweight='bold')
         # Convert epochs to hours
-        max_epoch = int(epochs[-1])
+        max_epoch = (epochs[-1][0] + epochs[-1][1]) / 30.0  # Last event end time
         hour_ticks = np.arange(0, max_epoch, 120)  # 120 epochs = 1 hour
         ax2.set_xticks(hour_ticks)
         ax2.set_xticklabels([f'{h/120:.1f}' for h in hour_ticks])
@@ -238,13 +256,18 @@ def plot_hypnogram(xml_path, edf_path=None):
         # Print statistics
         print("\nSleep Stage Statistics:")
         print("="*70)
-        print(f"Total epochs: {len(stages)}")
-        print(f"Total duration: {len(stages)*30/3600:.2f} hours")
+        print(f"Total sleep stage events: {len(stages)}")
+        print(f"Total duration: {total_duration/3600:.2f} hours")
+        print(f"Total epochs: {int(total_duration/30)}")
         print("\nStage distribution:")
         for stage_idx, stage_name in enumerate(stage_names):
-            count = np.sum(stages == stage_idx)
-            percentage = count / len(stages) * 100
-            print(f"  {stage_name}: {count} epochs ({percentage:.1f}%)")
+            # Count events and calculate total duration for this stage
+            stage_events = [e for e in epochs if e[2] == stage_idx]
+            count = len(stage_events)
+            stage_duration = sum(e[1] for e in stage_events)
+            percentage = stage_duration / total_duration * 100
+            n_epochs = int(stage_duration / 30)
+            print(f"  {stage_name}: {count} events, {n_epochs} epochs ({percentage:.1f}%)")
 
     except FileNotFoundError:
         print(f"Error: XML file not found at {xml_path}")
