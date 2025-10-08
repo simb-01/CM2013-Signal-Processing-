@@ -1,0 +1,100 @@
+---
+title: "s2t2"
+author: "Rina"
+date: "2025-09-30"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(minpack.lm) 
+# 读取 CSV 数据
+data <- read.csv("Data_T2.csv")
+head(data)
+plot(data$Time, data$GE_fasted, type="b", 
+     xlab="Time (min)", ylab="Gastric Volume",
+     main="Fasted Gastric Emptying")
+
+
+fasted_model <- nlsLM(
+  GE_fasted ~ GE0 * exp(-k * Time),
+  data = data,
+  start = list(GE0 = max(data$GE_fasted), k = 0.01)
+)
+
+# 查看拟合结果
+summary(fasted_model)
+params <- coef(fasted_model)
+GE0 <- params["GE0"] 
+k <- params["k"]    
+t_half <- log(2)/k
+
+cat("GE0 =", GE0, "\n")
+cat("k =", k, "\n")
+cat("Half-life =", t_half, "minutes\n")
+
+# 5️⃣ 绘制拟合曲线
+lines(data$Time, GE0 * exp(-k * data$Time), col="blue", lwd=2)
+legend("topright", legend=c("Observed","Fitted"), col=c("black","blue"), lty=1, pch=c(1,NA))
+
+
+library(minpack.lm)
+
+# --- Weibull 拟合 ---
+fed_model <- nlsLM(
+  GE_fed ~ GE0 * exp(-(Time/alpha)^beta),
+  data = data,
+  start = list(GE0 = max(data$GE_fed), alpha = max(data$Time)/2, beta = 2)
+)
+params_fed <- coef(fed_model)
+GE0_fed <- params_fed["GE0"]
+alpha_fed <- params_fed["alpha"]
+beta_fed <- params_fed["beta"]
+
+cat("GE0 =", GE0_fed, "\n")
+cat("alpha =", alpha_fed, "\n")
+cat("beta =", beta_fed, "\n")
+
+T50 <- uniroot(function(t) GE0_fed * exp(-(t/alpha_fed)^beta_fed) - GE0_fed/2,
+               c(0, max(data$Time)))$root
+cat("T50 =", T50, "minutes\n")
+AUC <- sum(diff(data$Time) * (head(data$GE_fed,-1) + tail(data$GE_fed,-1))/2)
+cat("AUC =", AUC, "\n")
+Tlag <- uniroot(
+  function(t) GE0_fed * exp(-(t/alpha_fed)^beta_fed) - (0.99 * GE0_fed),
+  c(0, max(data$Time))
+)$root
+cat("Tlag =", Tlag, "minutes\n")
+
+# --- 延迟指数模型拟合 ---
+lag_model <- nlsLM(
+  GE_fed ~ V0 * exp(-k * pmax(0, Time - tlag_lag)),
+  data = data,
+  start = list(V0 = max(data$GE_fed), k = 0.05, tlag_lag = 26)
+)
+params_lag <- coef(lag_model)
+data$pred_lag <- params_lag["V0"] * exp(-params_lag["k"] * pmax(0, data$Time - params_lag["tlag_lag"]))
+
+t_half_fed <- unname(
+(- log((params_lag["V0"]/2)/params_lag["V0"])/params_lag["k"]) + params_lag["tlag_lag"])
+
+params_lag
+t_half_fed
+# --- 绘图：保留原有风格 + 延迟指数模型 ---
+plot(data$Time, data$GE_fed, type="b",
+     xlab="Time (min)", ylab="Gastric Volume",
+     main="Fed Gastric Emptying",
+     pch=1, col="black")
+
+# Weibull 拟合曲线
+lines(data$Time, GE0_fed * exp(-(data$Time/alpha_fed)^beta_fed), col="red", lwd=2)
+
+# 延迟指数模型曲线
+lines(data$Time, data$pred_lag, col="blue", lwd=2, lty=2)  # 虚线
+
+# 图例
+legend("topright", legend=c("Observed","Weibull Fit","Delayed Exponential"),
+       col=c("black","red","blue"), lty=c(1,1,2), pch=c(1,NA,NA), lwd=c(1,2,2))
+
