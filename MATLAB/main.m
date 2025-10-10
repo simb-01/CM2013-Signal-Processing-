@@ -77,4 +77,8 @@ generate_report(model, selected_features, labels);
 
 fprintf('--- Pipeline Finished ---\n');
 
+% ------------------------------------------------------------------
+% Ok, but how do I interpret the log? why does it have so many lines?
+% ------------------------------------------------------------------
+
 end
