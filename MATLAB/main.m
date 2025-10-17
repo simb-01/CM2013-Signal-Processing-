@@ -17,9 +17,11 @@ fprintf('--- Sleep Scoring Pipeline - Iteration %d ---\n', CURRENT_ITERATION);
 % Example uses R1.edf and R1.xml - students should adapt for their dataset
 edf_file = fullfile(SAMPLE_DIR, 'R1.edf'); % Example EDF file
 xml_file = fullfile(SAMPLE_DIR, 'R1.xml'); % Corresponding annotation file
+% edf_file = fullfile("C:\Users\S B\Documents\GitHub\CM2013-Signal-Processing-\data\realData\R1.edf"); % Example EDF file
+% xml_file = fullfile("C:\Users\S B\Documents\GitHub\CM2013-Signal-Processing-\data\realData\R1.xml"); % Corresponding annotation file
 
 % Handle both multi-channel and single-channel formats
-try
+ try
     [multi_channel_data, labels, channel_info] = load_training_data(edf_file, xml_file);
     fprintf('Multi-channel data loaded\n');
     % Use first EEG channel for pipeline compatibility

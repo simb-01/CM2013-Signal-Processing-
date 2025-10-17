@@ -11,7 +11,8 @@ USE_CACHE = true;
 DATA_DIR = '../data/';
 TRAINING_DIR = [DATA_DIR 'training/'];
 HOLDOUT_DIR = [DATA_DIR 'holdout/'];
-SAMPLE_DIR = [DATA_DIR 'sample/'];
+% SAMPLE_DIR = [DATA_DIR 'sample/'];
+SAMPLE_DIR = [DATA_DIR 'realData/'];
 CACHE_DIR = 'cache/';
 
 % Validate and create directories if needed

@@ -4,8 +4,8 @@ close all;
 clear all;
 
 %% load edf and xml files
-edfFilename = "D:\_Simone\KTH\_S1\Signal Processing and Data Analytics\GitHub Folder\Project Data\R1.edf";
-xmlFilename = "D:\_Simone\KTH\_S1\Signal Processing and Data Analytics\GitHub Folder\Project Data\R1.xml";
+edfFilename = "C:\Users\S B\Documents\GitHub\CM2013-Signal-Processing-\data\realData\R1.edf";
+xmlFilename = "C:\Users\S B\Documents\GitHub\CM2013-Signal-Processing-\data\realData\R1.xml";
 [hdr, record] = edfread(edfFilename);
 [events, stages, epochLength,annotation] = readXML(xmlFilename);
 %%

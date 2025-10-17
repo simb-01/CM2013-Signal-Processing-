@@ -1,5 +1,11 @@
 function generate_report(model, features, labels)
 %% Generate report - simple text report
+
+% Validate and reshape inputs ------------------------------------
+labels = labels(:);  % Force labels to be a column vector [N x 1]
+features = double(features);  % Ensure features are numeric
+%-----------------------------------------------------------------
+
 fprintf('\n=== SLEEP SCORING REPORT ===\n');
 
 % Predict
