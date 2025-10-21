@@ -17,21 +17,22 @@ fprintf('--- Sleep Scoring Pipeline - Iteration %d ---\n', CURRENT_ITERATION);
 % Example uses R1.edf and R1.xml - students should adapt for their dataset
 edf_file = fullfile(SAMPLE_DIR, 'R1.edf'); % Example EDF file
 xml_file = fullfile(SAMPLE_DIR, 'R1.xml'); % Corresponding annotation file
-% edf_file = fullfile("C:\Users\S B\Documents\GitHub\CM2013-Signal-Processing-\data\realData\R1.edf"); % Example EDF file
-% xml_file = fullfile("C:\Users\S B\Documents\GitHub\CM2013-Signal-Processing-\data\realData\R1.xml"); % Corresponding annotation file
 
 % Handle both multi-channel and single-channel formats
- try
-    [multi_channel_data, labels, channel_info] = load_training_data(edf_file, xml_file);
+ % try
+    % [multi_channel_data, labels, channel_info] = load_training_data(edf_file, xml_file);
+    [multi_channel_data, labels, channel_info] = load_training_data_v1(edf_file, xml_file, {'EEG'});
     fprintf('Multi-channel data loaded\n');
     % Use first EEG channel for pipeline compatibility
-    eeg_data = squeeze(multi_channel_data.eeg(:, 1, :));
+    % eeg_data = squeeze(multi_channel_data.eeg(:, 1, :));
+    eeg_data = squeeze(multi_channel_data(:, 1, :));
     fprintf('Using EEG channel 1 for pipeline\n');
-catch
-    % Fallback to old format
-    [eeg_data, labels] = load_training_data(edf_file, xml_file);
-    fprintf('Single-channel data loaded\n');
-end
+% catch
+%     % Fallback to old format
+%     % [eeg_data, labels] = load_training_data(edf_file, xml_file);
+%     [eeg_data, labels] = load_training_data_v1(edf_file, xml_file, {'EEG'});
+%     fprintf('Single-channel data loaded\n');
+% end
 
 % 2. Preprocessing
 preprocessed_data = [];
@@ -47,6 +48,8 @@ if isempty(preprocessed_data)
     end
 end
 
+preprocessed_data = preprocess(eeg_data);
+
 % 3. Feature Extraction
 features = [];
 cache_filename_features = sprintf('features_iter%d.mat', CURRENT_ITERATION);
@@ -55,11 +58,14 @@ if USE_CACHE
 end
 
 if isempty(features)
-    features = extract_features(preprocessed_data);
+    % features = extract_features(preprocessed_data);
+    features = extract_features_v1(preprocessed_data);
     if USE_CACHE
         save_cache(features, cache_filename_features, CACHE_DIR);
     end
 end
+
+features = extract_features_v1(preprocessed_data);
 
 % 4. Feature Selection
 selected_features = select_features(features, labels);
@@ -79,8 +85,6 @@ generate_report(model, selected_features, labels);
 
 fprintf('--- Pipeline Finished ---\n');
 
-% ------------------------------------------------------------------
-% Ok, but how do I interpret the log? why does it have so many lines?
-% ------------------------------------------------------------------
+
 
 end
