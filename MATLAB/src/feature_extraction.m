@@ -1,202 +1,193 @@
-function features = extract_features(data)
-%% STUDENT IMPLEMENTATION AREA: Extract features based on current iteration.
+% function feature_data = feature_extraction(data)
+% % FEATURE_EXTRACTION - 时间域 + Welch + DWT 特征提取
+% %
+% % 输入:
+% %   data: 1xN cell，每个 cell [nEpochs x nChannels x nSamples]
+% % 输出:
+% %   feature_data: 1xN cell，每个 cell [nEpochs x nFeatures x nChannels]
+% 
+% % 获取 CURRENT_ITERATION
+% try
+%     CURRENT_ITERATION = evalin('caller','CURRENT_ITERATION');
+% catch
+%     CURRENT_ITERATION = 1;
+% end
+% fprintf('Extracting features for iteration %d...\n', CURRENT_ITERATION);
+% 
+% nrSubjects = numel(data);
+% feature_data = cell(1, nrSubjects);
+% 
+% % ----------------------
+% % 1️⃣ 时间域特征
+% % ----------------------
+% time_features_cell = extract_all_features(data);  % 输出: 1xN cell, [nEpochs x nChannels x 16]
+% 
+% if CURRENT_ITERATION >= 2
+%     % ----------------------
+%     % 2️⃣ Welch 特征
+%     % ----------------------
+%     welch_features_cell = extract_welch_features(data); % 输出: 1xN cell, [nEpochs x nChannels x 11]
+% 
+%     % ----------------------
+%     % 3️⃣ DWT 特征
+%     % ----------------------
+%     dwt_features_cell = extract_dwt_features(data);     % 输出: 1xN cell, [nEpochs x nChannels x 42]
+% end
+% 
+% % ----------------------
+% % 拼接每个 subject
+% % ----------------------
+% for subj_idx = 1:nrSubjects
+%     time_feats = time_features_cell{subj_idx}; % [nEpochs x nChannels x 16]
+%     
+%     if CURRENT_ITERATION >=2
+%         welch_feats = welch_features_cell{subj_idx}; % [nEpochs x nChannels x 11]
+%         dwt_feats   = dwt_features_cell{subj_idx};   % [nEpochs x nChannels x 42]
+%         
+%         % 沿 feature 维度拼接：nTime + nWelch + nDWT
+%         subj_features = cat(3, time_feats, welch_feats, dwt_feats); % [nEpochs x nChannels x totalFeatures]
+%     else
+%         subj_features = time_feats; % Iteration 1
+%     end
+%     
+%     % 调整输出维度为 [nEpochs x nFeatures x nChannels]
+%     feature_data{subj_idx} = permute(subj_features, [1 3 2]);
+% end
+% 
+% fprintf('\n=== Feature extraction complete ===\n');
+% end
+function feature_data = feature_extraction(data)
+% FEATURE_EXTRACTION - 时间域 + Welch + DWT 特征提取（可选跳过时域）
 %
-% This function should handle both single-channel (old format) and
-% multi-channel data (new format with 2 EEG + 2 EOG + 1 EMG channels).
+% 输入:
+%   data: 1xN cell，每个 cell [nEpochs x nChannels x nSamples]
+% 输出:
+%   feature_data: 1xN cell，每个 cell [nEpochs x nFeatures x nChannels]
 %
-% Iteration 1: 16 time-domain features per EEG channel
-% Iteration 2: 31+ features (time + frequency domain) per channel
-% Iteration 3: Multi-signal features (EEG + EOG + EMG)
-% Iteration 4: Optimized feature set (selected subset)
+% 说明：
+% - 如果想临时只测试 Welch+DWT，可在 caller workspace 设置：
+%       EXTRACT_TIME = false;
+%   默认 EXTRACT_TIME = true。
+% - 函数会输出每个 subject 的特征维度信息（每通道、每 epoch 的特征数量）
+% - 会输出每个方法的大致耗时，便于定位瓶颈
 
-% Get CURRENT_ITERATION from caller's workspace
+% ---------------- 获取 CURRENT_ITERATION ----------------
 try
-    CURRENT_ITERATION = evalin('caller', 'CURRENT_ITERATION');
+    CURRENT_ITERATION = evalin('caller','CURRENT_ITERATION');
 catch
-    CURRENT_ITERATION = 1; % Default
+    CURRENT_ITERATION = 1;
 end
-
 fprintf('Extracting features for iteration %d...\n', CURRENT_ITERATION);
 
-% Detect if we have multi-channel data structure
-if isstruct(data) && isfield(data, 'eeg')
-    fprintf('Processing multi-channel data (EEG + EOG + EMG)\n');
-    features = extract_multi_channel_features(data, CURRENT_ITERATION);
+% ---------------- 可选开关：是否提取时域（默认 true） ----------------
+try
+    EXTRACT_TIME = evalin('caller','EXTRACT_TIME');
+catch
+    EXTRACT_TIME = true;
+end
+if ~islogical(EXTRACT_TIME)
+    EXTRACT_TIME = logical(EXTRACT_TIME);
+end
+if EXTRACT_TIME
+    fprintf('Time-domain extraction: ENABLED\n');
 else
-    fprintf('Processing single-channel data (backward compatibility)\n');
-    features = extract_single_channel_features(data, CURRENT_ITERATION);
+    fprintf('Time-domain extraction: DISABLED (only testing Welch/DWT)\n');
 end
 
-end
+nrSubjects = numel(data);
+feature_data = cell(1, nrSubjects);
 
+% ---------------- 计时器/统计 ----------------
+total_t_time = 0;
+total_t_welch = 0;
+total_t_dwt = 0;
 
-function features = extract_multi_channel_features(multi_channel_data, CURRENT_ITERATION)
-%% Extract features from multi-channel data: 2 EEG + 2 EOG + 1 EMG channels.
-% Students should expand this significantly!
-
-n_epochs = size(multi_channel_data.eeg, 1);
-all_features = [];
-
-for epoch_idx = 1:n_epochs
-    epoch_features = [];
-
-    % EEG features (2 channels)
-    for ch = 1:size(multi_channel_data.eeg, 2)
-        eeg_signal = squeeze(multi_channel_data.eeg(epoch_idx, ch, :));
-        eeg_features = extract_time_domain_features(eeg_signal);
-        epoch_features = [epoch_features, eeg_features];
-    end
-
-    if CURRENT_ITERATION >= 3
-        % Add EOG features (2 channels)
-        for ch = 1:size(multi_channel_data.eog, 2)
-            eog_signal = squeeze(multi_channel_data.eog(epoch_idx, ch, :));
-            eog_features = extract_eog_features(eog_signal);
-            epoch_features = [epoch_features, eog_features];
-        end
-
-        % Add EMG features (1 channel)
-        emg_signal = squeeze(multi_channel_data.emg(epoch_idx, 1, :));
-        emg_features = extract_emg_features(emg_signal);
-        epoch_features = [epoch_features, emg_features];
-    end
-
-    all_features = [all_features; epoch_features];
-end
-
-features = all_features;
-
-if CURRENT_ITERATION == 1
-    expected = 2 * 3; % 2 EEG channels × 3 features each
-    fprintf('Multi-channel Iteration 1: %d features (target: %d+)\n', size(features, 2), expected);
-    fprintf('Students must implement remaining 13 time-domain features per EEG channel!\n');
-elseif CURRENT_ITERATION >= 3
-    fprintf('Multi-channel features extracted: %d total\n', size(features, 2));
-    fprintf('(2 EEG + 2 EOG + 1 EMG channels)\n');
-end
-
-end
-
-
-function features = extract_single_channel_features(data, CURRENT_ITERATION)
-%% Backward compatibility for single-channel data.
-
-if CURRENT_ITERATION == 1
-    % Iteration 1: Time-domain features (TARGET: 16 features)
-    % CURRENT: Only 3 features implemented - students must add 13 more!
-    all_features = [];
-    for epoch_idx = 1:size(data, 1)
-        epoch = data(epoch_idx, :);
-        epoch_features = extract_time_domain_features(epoch);
-        all_features = [all_features; epoch_features];
-    end
-    features = all_features;
-
-    fprintf('WARNING: Only %d features extracted, target is 16 for iteration 1\n', size(features, 2));
-    fprintf('Students must implement the remaining time-domain features!\n');
-
-elseif CURRENT_ITERATION == 2
-    % TODO: Students must implement frequency-domain features
-    fprintf('TODO: Students must implement frequency-domain feature extraction\n');
-    fprintf('Target: ~31 features (time + frequency domain)\n');
-    features = zeros(size(data, 1), 0); % Empty features - students must implement
-
-elseif CURRENT_ITERATION >= 3
-    % TODO: Students must implement multi-signal features
-    fprintf('TODO: Students should use multi-channel data format for iteration 3+\n');
-    features = zeros(size(data, 1), 0); % Empty features - students must implement
-
+% ---------------- 如果启用时域，先提取（可能比较慢） ----------------
+time_features_cell = cell(1, nrSubjects);
+if EXTRACT_TIME
+    t0 = tic;
+    fprintf('\nStart extracting TIME-DOMAIN features for all subjects...\n');
+    time_features_cell = extract_all_features(data);  % 期望输出: 1xN cell, [nEpochs x nChannels x 16]
+    total_t_time = toc(t0);
+    fprintf('Time-domain extraction finished in %.2f s\n', total_t_time);
 else
-    error('Invalid iteration: %d', CURRENT_ITERATION);
+    % 留空占位，后面直接用 zeros 或跳过
+    time_features_cell = cell(1, nrSubjects);
 end
 
+% ---------------- Iteration >=2 时提取 Welch / DWT ----------------
+if CURRENT_ITERATION >= 2
+    % Welch
+    t0 = tic;
+    fprintf('\nStart extracting WELCH features for all subjects...\n');
+    welch_features_cell = extract_welch_features(data); % 1xN cell, [nEpochs x nChannels x 11]
+    total_t_welch = toc(t0);
+    fprintf('Welch extraction finished in %.2f s\n', total_t_welch);
+    
+    % DWT
+    t0 = tic;
+    fprintf('\nStart extracting DWT features for all subjects...\n');
+    dwt_features_cell = extract_dwt_features(data);     % 1xN cell, [nEpochs x nChannels x 42]
+    total_t_dwt = toc(t0);
+    fprintf('DWT extraction finished in %.2f s\n', total_t_dwt);
+else
+    welch_features_cell = {};
+    dwt_features_cell = {};
 end
 
-
-function features = extract_time_domain_features(epoch)
-%% EXAMPLE: Extract basic time-domain features from a single epoch.
-%
-% This is a MINIMAL example with only 3 features.
-% Students must implement the remaining 13+ time-domain features.
-%
-% Works for any signal type (EEG, EOG, EMG) but students should consider
-% signal-specific features for optimal performance.
-
-% EXAMPLE: Only 3 basic features - students must add 13+ more
-features = [
-    mean(epoch),    % Mean
-    median(epoch),  % Median
-    std(epoch)      % Standard deviation
-];
-
-% TODO: Students must implement remaining time-domain features:
-% Basic statistical features:
-% - var(epoch)              % Variance
-% - rms(epoch)              % RMS
-% - min(epoch)              % Minimum
-% - max(epoch)              % Maximum
-% - range(epoch)            % Range
-% - skewness(epoch)         % Skewness
-% - kurtosis(epoch)         % Kurtosis
-
-% Signal complexity features:
-% - zero_crossings(epoch)   % Zero crossings
-% - hjorth_activity(epoch)  % Hjorth activity
-% - hjorth_mobility(epoch)  % Hjorth mobility
-% - hjorth_complexity(epoch)% Hjorth complexity
-
-% Signal energy and power:
-% - sum(epoch.^2)           % Total energy
-% - mean(epoch.^2)          % Mean power
-
+% ---------------- 拼接每个 subject（输出为 [nEpochs x nFeatures x nChannels]） ----------------
+for subj_idx = 1:nrSubjects
+    subj_data = data{subj_idx};
+    [nEpochs, nChannels, ~] = size(subj_data);
+    
+    % 获取各方法的特征维度（每通道）
+    if EXTRACT_TIME
+        time_feats = time_features_cell{subj_idx}; % [nEpochs x nChannels x nTime]
+        nTime = size(time_feats, 3);
+    else
+        time_feats = zeros(nEpochs, nChannels, 0);
+        nTime = 0;
+    end
+    
+    if CURRENT_ITERATION >= 2
+        welch_feats = welch_features_cell{subj_idx}; % [nEpochs x nChannels x nWelch]
+        dwt_feats   = dwt_features_cell{subj_idx};   % [nEpochs x nChannels x nDWT]
+        nWelch = size(welch_feats, 3);
+        nDWT   = size(dwt_feats, 3);
+    else
+        welch_feats = zeros(nEpochs, nChannels, 0);
+        dwt_feats = zeros(nEpochs, nChannels, 0);
+        nWelch = 0; nDWT = 0;
+    end
+    
+  
+    subj_features = cat(3, time_feats, welch_feats, dwt_feats); % [nEpochs x nChannels x totalFeatures]
+    totalFeaturesPerChannel = size(subj_features, 3);
+   
+    feature_data{subj_idx} = subj_features;   % 直接输出 [Epoch × Channels × Features]
+    
+    % 输出信息：每个 subject 的维度与统计
+    features_per_epoch = size(subj_features, 2); % nFeatures *per epoch* (across channels preserved in 3rd dim)
+    fprintf('\nSubject %d summary:\n', subj_idx);
+    fprintf('  nEpochs = %d, nChannels = %d\n', nEpochs, nChannels);
+    fprintf('  features per CHANNEL = %d (time=%d, welch=%d, dwt=%d)\n', ...
+        totalFeaturesPerChannel, nTime, nWelch, nDWT);
+    fprintf('  features per EPOCH (total across channels preserved in 3rd dim) = %d\n', features_per_epoch);
+    % 进一步打印每 epoch 是否一致（检查）
+    fprintf('  Sanity check: subj_features size = [%d x %d x %d]\n', size(subj_features,1), size(subj_features,2), size(subj_features,3));
 end
 
-
-function features = extract_eog_features(eog_signal)
-%% STUDENT TODO: Extract EOG-specific features for eye movement detection.
-%
-% EOG signals are used to detect:
-% - Rapid eye movements (REM sleep indicator)
-% - Slow eye movements
-% - Eye blinks and artifacts
-
-features = [
-    mean(eog_signal),                           % Mean
-    std(eog_signal),                           % Standard deviation
-    max(eog_signal) - min(eog_signal)          % Range
-];
-
-% TODO: Students should add:
-% - Eye movement detection features
-% - Rapid vs slow movement discrimination
-% - Cross-channel correlations (left vs right eye)
-
+% ---------------- 总时长小结 ----------------
+fprintf('\n=== Timing summary ===\n');
+if EXTRACT_TIME
+    fprintf('Time-domain total time: %.2f s\n', total_t_time);
+else
+    fprintf('Time-domain skipped by EXTRACT_TIME=false\n');
+end
+if CURRENT_ITERATION >=2
+    fprintf('Welch total time: %.2f s\n', total_t_welch);
+    fprintf('DWT total time:   %.2f s\n', total_t_dwt);
 end
 
-
-function features = extract_emg_features(emg_signal)
-%% STUDENT TODO: Extract EMG-specific features for muscle tone detection.
-%
-% EMG signals are used to detect:
-% - Muscle tone levels (high in wake, low in REM)
-% - Muscle twitches and artifacts
-% - Sleep-related muscle activity
-
-features = [
-    mean(emg_signal),                          % Mean
-    std(emg_signal),                          % Standard deviation
-    rms(emg_signal)                           % RMS
-];
-
-% TODO: Students should add:
-% - High-frequency power (muscle activity indicator)
-% - Spectral edge frequency
-% - Muscle tone quantification
-
-end
-
-
-function rms_val = rms(signal)
-%% Helper function: Root Mean Square
-rms_val = sqrt(mean(signal.^2));
+fprintf('\n=== Feature extraction complete ===\n');
 end
