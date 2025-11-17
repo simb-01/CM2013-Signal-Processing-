@@ -83,7 +83,7 @@ fprintf('Extracting features for iteration %d...\n', CURRENT_ITERATION);
 try
     EXTRACT_TIME = evalin('caller','EXTRACT_TIME');
 catch
-    EXTRACT_TIME = true;
+    EXTRACT_TIME = false;
 end
 if ~islogical(EXTRACT_TIME)
     EXTRACT_TIME = logical(EXTRACT_TIME);
@@ -160,21 +160,19 @@ for subj_idx = 1:nrSubjects
         nWelch = 0; nDWT = 0;
     end
     
-  
-    subj_features = cat(3, time_feats, welch_feats, dwt_feats); % [nEpochs x nChannels x totalFeatures]
-    totalFeaturesPerChannel = size(subj_features, 3);
-   
-    feature_data{subj_idx} = subj_features;   % 直接输出 [Epoch × Channels × Features]
-    
-    % 输出信息：每个 subject 的维度与统计
-    features_per_epoch = size(subj_features, 2); % nFeatures *per epoch* (across channels preserved in 3rd dim)
-    fprintf('\nSubject %d summary:\n', subj_idx);
-    fprintf('  nEpochs = %d, nChannels = %d\n', nEpochs, nChannels);
-    fprintf('  features per CHANNEL = %d (time=%d, welch=%d, dwt=%d)\n', ...
+  subj_features = cat(3, time_feats, welch_feats, dwt_feats); % [nEpochs x nChannels x totalFeaturesPerChannel]
+totalFeaturesPerChannel = size(subj_features, 3); % 每个通道特征数
+
+feature_data{subj_idx} = subj_features;   % 输出 [nEpochs x nChannels x nFeatures]
+
+% 输出信息
+fprintf('\nSubject %d summary:\n', subj_idx);
+fprintf('  nEpochs = %d, nChannels = %d\n', nEpochs, nChannels);
+fprintf('  features per epoch per CHANNEL = %d (time=%d, welch=%d, dwt=%d)\n', ...
         totalFeaturesPerChannel, nTime, nWelch, nDWT);
-    fprintf('  features per EPOCH (total across channels preserved in 3rd dim) = %d\n', features_per_epoch);
-    % 进一步打印每 epoch 是否一致（检查）
-    fprintf('  Sanity check: subj_features size = [%d x %d x %d]\n', size(subj_features,1), size(subj_features,2), size(subj_features,3));
+fprintf('  Sanity check: subj_features size = [%d x %d x %d]\n', ...
+        size(subj_features,1), size(subj_features,2), size(subj_features,3));
+
 end
 
 % ---------------- 总时长小结 ----------------
