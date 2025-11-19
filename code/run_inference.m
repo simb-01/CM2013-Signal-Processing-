@@ -16,10 +16,10 @@ fprintf('--- Sleep Scoring Inference - Iteration %d ---\n', CURRENT_ITERATION);
 % Load the trained model (assuming it was saved during training)
 model_filename = sprintf('model_iter%d.mat', CURRENT_ITERATION);
 model = load_cache(model_filename, CACHE_DIR);
-if isempty(model)
-    fprintf('Error: Trained model not found. Please run main.m first to train a model.\n');
-    return;
-end
+% if isempty(model)
+%     fprintf('Error: Trained model not found. Please run main.m first to train a model.\n');
+%     return;
+% end
 
 % 1. Load Hold-out Data
 % For jumpstart, we're using dummy data. In a real scenario, you'd iterate through files.
@@ -37,12 +37,13 @@ if USE_CACHE
 end
 
 if isempty(preprocessed_holdout_data)
-    preprocessed_holdout_data = preprocess_all_subjects(all_data, all_info);
+    preprocessed_holdout_data = preprocess_all_subjects(all_data1, all_info1);
     
     if (USE_CACHE == false)
         save_cache(preprocessed_holdout_data, cache_filename_preprocess_holdout, CACHE_DIR);
     end
 end
+%% 
 
 % 3. Feature Extraction (using the same logic as training)
 holdout_features = [];
