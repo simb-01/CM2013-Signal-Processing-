@@ -73,9 +73,6 @@ for e = 1:nEpochs
     startIdx = (e-1)*epochSec + 1;
     endIdx   = e*epochSec;  % 完整 30 秒，必然 <= length(stages)
     labels(e) = mode(stages(startIdx:endIdx)); 
-    if labels(e) > 1
-        labels(e) = labels(e) - 1;  % 调整 stage 编码
-    end
 end
 
 %% 7. Channel info
@@ -99,16 +96,16 @@ fprintf('Loaded %d full 30s epochs and %d channels: %s\n', nEpochs, nChannels, s
 % % end
 % % sgtitle(sprintf('30-second Epoch #%d', epochNumber));
 % % 
-% % 6.2 Plot Hypnogram
-% figure('Name','Hypnogram','Color','w');
-% time_min = (1:nEpochs)*30/60; % 每个 epoch 30 秒，转分钟
-% plot(time_min, labels, '-o','MarkerSize',2);
-% ylim([-1 5]);   % 为视觉效果稍微放宽一点
-% set(gca, 'ytick', 0:4, ...
-%          'yticklabel', {'Wake','N1','N2','N3','REM'});
-% xlabel('Time (Minutes)');
-% ylabel('Sleep Stage');
-% title('Hypnogram');
-% box off;
+% 6.2 Plot Hypnogram
+figure('Name','Hypnogram','Color','w');
+time_min = (1:nEpochs)*30/60; % 每个 epoch 30 秒，转分钟
+plot(time_min, labels, '-o','MarkerSize',2);
+ylim([-1 5]);   % 为视觉效果稍微放宽一点
+set(gca, 'ytick', 0:4, ...
+         'yticklabel', {'Wake','N1','N2','N3','REM'});
+xlabel('Time (Minutes)');
+ylabel('Sleep Stage');
+title('Hypnogram');
+box off;
 end
 

@@ -68,18 +68,18 @@ if events.getLength>0
             eventStruct = struct('EventConcept',name, 'Start',starttime,'Duration',duration,'Desaturation',baseline,'SpO2Nadir',nadir,'Text',text);
             
             %        if ~isempty(strfind(stagesConcept,name))
-            if strcmp(stagesConcept{1},name)==1
-                stages = [stages, ones(1,duration)+3];
-            elseif strcmp(stagesConcept{2},name)==1
+            if strcmp(stagesConcept{4},name)==1
                 stages = [stages, ones(1,duration)+2];
             elseif strcmp(stagesConcept{3},name)==1
+                stages = [stages, ones(1,duration)+2];
+            elseif strcmp(stagesConcept{2},name)==1
                 stages = [stages, ones(1,duration)+1];
-            elseif strcmp(stagesConcept{4},name)==1
+            elseif strcmp(stagesConcept{1},name)==1
                 stages = [stages, ones(1,duration)];
             elseif strcmp(stagesConcept{5},name)==1
-                stages = [stages, zeros(1,duration)];
+                stages = [stages, zeros(1,duration)+4];
             elseif strcmp(stagesConcept{6},name)==1
-                stages = [stages, zeros(1,duration)+5];
+                stages = [stages, zeros(1,duration)];
                 %             end
             else
                 eventsVector = [eventsVector, eventStruct];
