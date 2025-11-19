@@ -35,7 +35,7 @@ function S = generateSubjectStruct(preprocessedData3D, featuresData3D, all_label
         labelsMatrix = labelsCell';  % [nEpochs x labels]
 
         % channelNames 和 samplingRate
-        channelNames = {'EEGsec', 'ECG', 'EMG', 'EOGL', 'EOGR', 'EEG'};
+        channelNames = {'EEGsec','EEG','ECG', 'EMG', 'EOGL', 'EOGR'};
         samplingRates = [125, 125, 125, 50, 50, 125];
 
         % 保存结构体
