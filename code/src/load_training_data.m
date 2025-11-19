@@ -1,96 +1,114 @@
+
 function [multi_channel_data, labels, channel_info] = load_training_data(edfFilePath, xmlFilePath, desiredChannels)
-%% Load EDF and XML files for sleep scoring
-% Inputs:
-%   edfFilePath    - EDF file path
-%   xmlFilePath    - XML annotation file path
-%   desiredChannels - (optional) cell array of strings[EEGsec, ECG, EMG, EOGL, EOGR, EEG]
+%% Load EDF and XML files for sleep scoring (only full 30s epochs)
+%
 % Outputs:
-%   multi_channel_data - [nEpochs x nChannels x nSamples] selected signals
-%   labels             - [nEpochs x 1] sleep stage labels
-%   channel_info       - struct with channel names and sampling rates
+%   multi_channel_data : [nEpochs x nChannels x nSamples]
+%   labels             : [nEpochs x 1] sleep stage labels
+%   channel_info       : struct with .labels and .samples
 
 fprintf('Loading training data from %s and %s...\n', edfFilePath, xmlFilePath);
 
 %% 1. Load EDF
 [hdr, record] = edfread(edfFilePath);  % record: [nChannels x nSamplesTotal]
+if isempty(hdr)
+    error('EDF header empty.');
+end
 
 %% 2. Load XML annotations
 [~, stages, ~, ~] = readXML(xmlFilePath); % stages 按秒展开
+if isempty(stages)
+    error('XML annotation empty.');
+end
 
 %% 3. Extract relevant channels
 if nargin < 3 || isempty(desiredChannels)
-    desiredChannels = {'EEG','EOG','EMG'}; % 默认
+    desiredChannels = {'EEG','EOG','EMG'};
 end
 idx = find(contains(hdr.label, desiredChannels, 'IgnoreCase', true));
 if isempty(idx)
     error('None of the desired channels were found in the EDF file.');
 end
 selectedLabels = hdr.label(idx);
-
-%% 4. Segment into 30-second epochs
+Fs_vec = hdr.samples(idx);
 nChannels = numel(idx);
-nEpochs = min(floor(length(record(idx(1),:)) ./ (30 .* hdr.samples(idx(1)))));
-nSamples = 30 * max(hdr.samples(idx)); 
 
+%% 4. Determine number of full 30-second epochs
+epochSec = 30;
+
+% 每通道 EDF 可用完整 epoch 数
+nEpochs_per_ch = zeros(1, nChannels);
+for ch = 1:nChannels
+    totalSamples_ch = length(record(idx(ch),:));
+    nEpochs_per_ch(ch) = floor(totalSamples_ch / (Fs_vec(ch)*epochSec));
+end
+
+% XML 可用完整 epoch 数
+nEpochs_xml = floor(length(stages)/epochSec);
+
+% 最终 epoch 数 = EDF 和 XML 都可用的最小值
+nEpochs = min([nEpochs_per_ch, nEpochs_xml]);
+
+if nEpochs < 1
+    error('Not enough data for one full 30-second epoch.');
+end
+
+nSamples = 30 * max(Fs_vec);  % 输出每 epoch 的样本数（最高采样率通道）
+
+%% 5. Segment EDF into epochs
 multi_channel_data = zeros(nEpochs, nChannels, nSamples);
 for ch = 1:nChannels
-    Fs = hdr.samples(idx(ch));
+    Fs = Fs_vec(ch);
+    samplesPerEpoch = Fs * epochSec;
     for e = 1:nEpochs
-        startIdx = (e-1)*Fs*30 + 1;
-        endIdx   = e*Fs*30;
-        multi_channel_data(e,ch,1:Fs*30) = record(idx(ch), startIdx:endIdx);
+        startIdx = (e-1)*samplesPerEpoch + 1;
+        endIdx   = e*samplesPerEpoch;
+        multi_channel_data(e,ch,1:samplesPerEpoch) = record(idx(ch), startIdx:endIdx);
     end
 end
 
-%% 5. Match epochs with sleep stage labels
-% 将按秒展开的 stages 压缩成 30 秒 epoch
-epochSec = 30;
-stages_epoch = zeros(1, nEpochs);
+%% 6. Compress stages into 30-second epochs
+labels = zeros(nEpochs,1);
 for e = 1:nEpochs
     startIdx = (e-1)*epochSec + 1;
-    endIdx   = min(e*epochSec, length(stages));
-    stages_epoch(e) = mode(stages(startIdx:endIdx)); % 取众数
-        % --------------------------------------------------
-    % Fixing stage label:
-    % {'Wake'=0, 'N1'=1, 'N2'=2, 'N3'=3, 'REM'=4}
-    if stages_epoch(e) > 1
-        stages_epoch(e) = stages_epoch(e) - 1;
+    endIdx   = e*epochSec;  % 完整 30 秒，必然 <= length(stages)
+    labels(e) = mode(stages(startIdx:endIdx)); 
+    if labels(e) > 1
+        labels(e) = labels(e) - 1;  % 调整 stage 编码
     end
-    % --------------------------------------------------
 end
 
-labels = stages_epoch; 
-channel_info.labels = selectedLabels;
-channel_info.samples = hdr.samples(idx);
+%% 7. Channel info
+channel_info.labels  = selectedLabels;
+channel_info.samples = Fs_vec;
 
-fprintf('Loaded %d epochs and %d channels: %s\n', nEpochs, nChannels, strjoin(selectedLabels, ', '));
-% 
-% %% 6. Visualization
-% 
-% % 6.1 Plot 30-second epoch of each selected signal
-% epochNumber = 1; % 选择第一个epoch
-% figure('Name','EEG/EOG/EMG 30s Epoch','Color','w');
-% for i = 1:nChannels
-%     Fs = hdr.samples(idx(i));
-%     signal = squeeze(multi_channel_data(epochNumber,i,1:Fs*30));
-%     subplot(nChannels,1,i);
-%     plot((1:length(signal))/Fs, signal);
-%     ylabel(selectedLabels{i});
-%     xlim([0 30]);
-%     title(['Channel ' selectedLabels{i}]);
-% end
-% sgtitle(sprintf('30-second Epoch #%d', epochNumber));
-% 
-% 6.2 Plot Hypnogram
-figure('Name','Hypnogram','Color','w');
-time_min = (1:nEpochs)*30/60; % 每个 epoch 30 秒，转分钟
-plot(time_min, labels, '-o','MarkerSize',2);
-ylim([-1 5]);   % 为视觉效果稍微放宽一点
-set(gca, 'ytick', 0:4, ...
-         'yticklabel', {'Wake','N1','N2','N3','REM'});
-xlabel('Time (Minutes)');
-ylabel('Sleep Stage');
-title('Hypnogram');
-box off;
-
+fprintf('Loaded %d full 30s epochs and %d channels: %s\n', nEpochs, nChannels, strjoin(selectedLabels, ', '));
+% % %% 6. Visualization
+% % 
+% % % 6.1 Plot 30-second epoch of each selected signal
+% % epochNumber = 1; % 选择第一个epoch
+% % figure('Name','EEG/EOG/EMG 30s Epoch','Color','w');
+% % for i = 1:nChannels
+% %     Fs = hdr.samples(idx(i));
+% %     signal = squeeze(multi_channel_data(epochNumber,i,1:Fs*30));
+% %     subplot(nChannels,1,i);
+% %     plot((1:length(signal))/Fs, signal);
+% %     ylabel(selectedLabels{i});
+% %     xlim([0 30]);
+% %     title(['Channel ' selectedLabels{i}]);
+% % end
+% % sgtitle(sprintf('30-second Epoch #%d', epochNumber));
+% % 
+% % 6.2 Plot Hypnogram
+% figure('Name','Hypnogram','Color','w');
+% time_min = (1:nEpochs)*30/60; % 每个 epoch 30 秒，转分钟
+% plot(time_min, labels, '-o','MarkerSize',2);
+% ylim([-1 5]);   % 为视觉效果稍微放宽一点
+% set(gca, 'ytick', 0:4, ...
+%          'yticklabel', {'Wake','N1','N2','N3','REM'});
+% xlabel('Time (Minutes)');
+% ylabel('Sleep Stage');
+% title('Hypnogram');
+% box off;
 end
+
