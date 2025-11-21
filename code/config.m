@@ -5,10 +5,10 @@
 CURRENT_ITERATION = 2;
 
 % Set to true to use cached data for preprocessing and feature extraction.
-%USE_CACHE = true;
-USE_CACHE = false;
+USE_CACHE = true;
+% USE_CACHE = false;
 % -- File Paths --
-DATA_DIR = 'D:\HuaweiMoveData\Users\Rina\Desktop\signal\CM2013-Signal-Processing-\data\';
+DATA_DIR = '../data/';
 TRAINING_DIR = [DATA_DIR 'training/'];
 HOLDOUT_DIR = [DATA_DIR 'holdout/'];
 SAMPLE_DIR = [DATA_DIR 'Project Data/'];
