@@ -10,7 +10,7 @@ end
 
 fprintf('Training %s classifier for iteration %d...\n', CLASSIFIER_TYPE, CURRENT_ITERATION);
 
-X_train = features(:);     
+X_train = features; 
 Y_train = labels(:);         
 % [X_train, Y_train, X_test, Y_test] = partition(features, labels);
 
@@ -25,17 +25,37 @@ switch lower(CLASSIFIER_TYPE)
         model = fitcknn(X_train, Y_train, 'NumNeighbors', KNN_N_NEIGHBORS, 'Standardize',1);
         fprintf('k-NN classifier trained with k=%d\n', KNN_N_NEIGHBORS);
     case 'svm'
-        % Use fitcecoc for multiclass SVM with a linear kernel (change to 'rbf' if needed)
-        try
-            SVM_C = evalin('caller', 'SMV_C');
-            SVM_KERNEL = evalin('caller', 'SMV_KERNEL');
-        catch
-            SVM_C = 1.0;
-            SVM_KERNEL = 'rbf';
-        end
-        t = templateSVM('Standardize',true, 'KernelFunction',SVM_KERNEL, 'BoxConstraint',SVM_C);
-        model = fitcecoc(X_train, Y_train, 'Learners', t);
-        fprintf('SVM classifier (ECOC) trained with %s kernel, BoxConstraint=%d\n', SVM_KERNEL, SVM_C);
+    % 获取参数
+    try
+        SVM_C = evalin('caller', 'SVM_C');
+        SVM_KERNEL = evalin('caller', 'SVM_KERNEL');
+    catch
+        SVM_C = 1.0;
+        SVM_KERNEL = 'linear';  % 默认用线性核更稳
+    end
+
+    classNames = unique(Y_train);
+    counts = histc(Y_train, classNames);
+    classWeights = max(counts)./counts;  % 少数类权重更高
+    sampleWeights = zeros(size(Y_train));
+    for i = 1:numel(classNames)
+        sampleWeights(Y_train == classNames(i)) = classWeights(i);
+    end
+
+    t = templateSVM('Standardize', true, 'KernelFunction', SVM_KERNEL, 'BoxConstraint', SVM_C);
+    model = fitcecoc(X_train, Y_train, ...
+                     'Learners', t, ...
+                     'ClassNames', classNames, ...
+                     'Coding', 'onevsall', ...
+                     'Prior', 'uniform', ...
+                     'Weights', sampleWeights);
+
+    fprintf('SVM classifier (ECOC, one-vs-all) trained with %s kernel, BoxConstraint=%g\n', ...
+            SVM_KERNEL, SVM_C);
+
+
+
+
     % Add new classifiers here as needed:
     % case 'tree'
     %     model = fitctree(X_train, Y_train);
