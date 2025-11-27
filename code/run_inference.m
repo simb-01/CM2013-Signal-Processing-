@@ -129,6 +129,7 @@ model=load_cache(cache_filename_model_final, CACHE_DIR);
 %% ---------------- 4) 预测 ----------------
 % predictions = predict(model, X_allB_ctx);
 %% 
+predict_B_corrected();
 predictions = Y_pred_all ;
 
 
