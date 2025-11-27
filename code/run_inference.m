@@ -27,7 +27,7 @@ model = load_cache(model_filename, CACHE_DIR);
 % holdout_eeg_data = data_loader_load_holdout_data(holdout_edf_file);
 %                                                       
 folderpath = 'D:\HuaweiMoveData\Users\Rina\Desktop\signal\CM2013-Signal-Processing-\data\Holdout';                         
-[all_data1, all_info1] = load_all_holdout_data(folderpath, {'EEG','EMG'});        
+[all_data1, all_info1] = load_all_holdout_data(folderpath, {'EEG','EMG','EOG'});        
 %% 
 USE_CACHE = false;
 % 2. Preprocessing (using the same logic as training)
@@ -91,34 +91,46 @@ end
 cache_filename_model_final = sprintf('model_final_iter%d.mat', CURRENT_ITERATION);
 model=load_cache(cache_filename_model_final, CACHE_DIR);
 
-% 4. Make Inference
-subjectNames = fieldnames(B);
-totalSubjects = numel(subjectNames);
+% %% ---------------- 1) 合并 B 中所有 subject 的特征 ----------------
+% subjectNamesB = fieldnames(B);
+% totalSubjectsB = numel(subjectNamesB);
+% 
+% X_allB = [];
+% subj_epoch_countsB = [];
+% 
+% for s = 1:totalSubjectsB
+%     subjName = subjectNamesB{s};
+%     subj = B.(subjName);
+%     if ~isfield(subj, 'features')
+%         warning('Subject %s missing features, skipping', subjName);
+%         continue;
+%     end
+%     featCell = subj.features;
+%     
+%     % Combine channels horizontally
+%     channelFeatures = [];
+%     for ch = 1:5
+%         f = featCell{ch};
+%         channelFeatures = [channelFeatures, f];
+%     end
+%     
+%     X_allB = [X_allB; channelFeatures];
+%     subj_epoch_countsB = [subj_epoch_countsB; size(channelFeatures,1)];
+% end
+% 
+% fprintf('Merged holdout features: samples=%d, features=%d, subjects=%d\n', size(X_allB,1), size(X_allB,2), numel(subj_epoch_countsB));
+% 
+% %% ---------------- 2) 归一化（使用训练集均值和标准差） ----------------
+% % 使用训练集 X_all 的均值和 std
+% X_allB_log = log1p(abs(X_allB)) .* sign(X_allB);
+% 
+% X_allB_scaled = (X_allB_log - mu) ./ (sigma + eps);  % 防止除0
 
-X_all1 = [];
-for s = 1:10  % 你只用前两个 subject
-    subj = B.(subjectNames{s});
-    featCell = subj.features;     
+%% ---------------- 4) 预测 ----------------
+% predictions = predict(model, X_allB_ctx);
+%% 
+predictions = Y_pred_all ;
 
-    channelFeatures = [];
-    for ch = 1:3
-        f = featCell{ch};             
-        channelFeatures = [channelFeatures, f];  % 水平拼接
-    end
-
-    X_all1 = [X_all1; channelFeatures];
-end
-X_all1_log = log1p(abs(X_all1)) .* sign(X_all1);
-X_all1_scaled = zscore(X_all1_log, 0, 1);       % 列归一化
-fprintf('Total inference samples: %d, Total features: %d\n', size(X_all1,1), size(X_all1,2));
-
-% 做预测
-predictions = predict(model, X_all1_scaled);
-figure;
-subplot(1,2,1);
-boxplot(X_all_scaled(:,1:20)); title('Training set features (first 20)');
-subplot(1,2,2);
-boxplot(X_all1_scaled(:,1:20)); title('Test set features (first 20)');
 
 
 %% 
