@@ -1,9 +1,9 @@
 %function run_inference()
 %% Script to run inference on hold-out data and generate submission file.
 
-clc;
-close all;
-clearvars -except config;
+% clc;
+% close all;
+% clearvars -except config;
 
 % Add src directory and subdirectories to path
 addpath(genpath('src'));
@@ -27,9 +27,9 @@ model = load_cache(model_filename, CACHE_DIR);
 % holdout_eeg_data = data_loader_load_holdout_data(holdout_edf_file);
 %                                                       
 folderpath = 'D:\HuaweiMoveData\Users\Rina\Desktop\signal\CM2013-Signal-Processing-\data\Holdout';                         
-[all_data1, all_info1] = load_all_holdout_data(folderpath, 'EEG');        
+[all_data1, all_info1] = load_all_holdout_data(folderpath, {'EEG','EMG'});        
 %% 
-
+USE_CACHE = false;
 % 2. Preprocessing (using the same logic as training)
 preprocessed_holdout_data = [];
 cache_filename_preprocess_holdout = sprintf('preprocessed_holdout_data_iter%d.mat', CURRENT_ITERATION);
@@ -63,6 +63,14 @@ if isempty(holdout_features)
 end
 %% 
 save_cache(holdout_features, cache_filename_features_holdout, CACHE_DIR);
+%% 
+%% 假设你想看第 1 个文件的最后一个 epoch
+for i = 1:numel(holdout_features)
+    data = holdout_features{i};                   % [nEpochs x nChannels x nSamples]
+    nEpochs = size(data,1);                % 当前 epoch 数
+    % 如果想和 Python 对齐，丢掉最后一个 epoch
+    holdout_features{i} = data(1:nEpochs-1,:,:);  
+end
 %% 4.subject struct
 B = [];
 
@@ -93,7 +101,7 @@ for s = 1:10  % 你只用前两个 subject
     featCell = subj.features;     
 
     channelFeatures = [];
-    for ch = 1:2
+    for ch = 1:3
         f = featCell{ch};             
         channelFeatures = [channelFeatures, f];  % 水平拼接
     end
@@ -117,7 +125,7 @@ boxplot(X_all1_scaled(:,1:20)); title('Test set features (first 20)');
 
 tabulate(predictions)
 % 假设你有每个样本的 epoch 数
-num_epochs = [1019, 1017, 1067, 1069, 1019, 959, 1068, 1067, 1069, 1067];  % 举例
+num_epochs = [1018, 1016, 1066, 1068, 1018, 958, 1067, 1066, 1068, 1066];  % 举例
 
 record_numbers = [];
 epoch_numbers  = [];
@@ -125,7 +133,7 @@ epoch_numbers  = [];
 for i = 1:length(num_epochs)
     n = num_epochs(i);
     record_numbers = [record_numbers; repmat(i, n, 1)];  % 每个样本重复 n 次
-    epoch_numbers  = [epoch_numbers; (1:n)'];            % 生成 1 到 n 的序列
+    epoch_numbers  = [epoch_numbers; (0:n-1)'];            % 生成 1 到 n 的序列
 end
 tmpConfig.DATA_DIR = DATA_DIR;
 tmpConfig.SUBMISSION_FILE = SUBMISSION_FILE;
