@@ -143,8 +143,130 @@
 % 
 % end
 % 
+
+
+
+
+% function feature_data = feature_extraction(data)
+% % FEATURE_EXTRACTION - 时间域 + Welch 特征提取（AR / DWT 已完全移除）
+% %
+% % 输入:
+% %   data: 1xN cell，每个 cell [nEpochs x nChannels x nSamples]
+% % 输出:
+% %   feature_data: 1xN cell，每个 cell [nEpochs x nFeatures x nChannels]
+% %
+% % 可选参数（caller workspace）:
+% %   EXTRACT_TIME = true/false (是否提取时域特征)
+% %   CURRENT_ITERATION = 迭代次数（>=2 时提取 Welch）
+% 
+% fprintf('Starting feature extraction (TIME + WELCH)...\n');
+% 
+% % ---------------- 获取 CURRENT_ITERATION ----------------
+% try
+%     CURRENT_ITERATION = evalin('caller','CURRENT_ITERATION');
+% catch
+%     CURRENT_ITERATION = 1;
+% end
+% fprintf('Extracting features for iteration %d...\n', CURRENT_ITERATION);
+% 
+% % ---------------- 获取是否提取时域 ----------------
+% try
+%     EXTRACT_TIME = evalin('caller','EXTRACT_TIME');
+% catch
+%     EXTRACT_TIME = false;
+% end
+% if ~islogical(EXTRACT_TIME)
+%     EXTRACT_TIME = logical(EXTRACT_TIME);
+% end
+% fprintf('Time-domain extraction: %s\n', string(EXTRACT_TIME));
+% 
+% nrSubjects = numel(data);
+% feature_data = cell(1, nrSubjects);
+% 
+% % ---------------- 初始化计时器 ----------------
+% total_t_time  = 0;
+% total_t_welch = 0;
+% 
+% % ---------------- 时间域特征 ----------------
+% time_features_cell = cell(1, nrSubjects);
+% if EXTRACT_TIME
+%     t0 = tic;
+%     fprintf('\nExtracting TIME-DOMAIN features...\n');
+%     time_features_cell = extract_all_features(data); % [nEpochs x nChannels x nTime]
+%     total_t_time = toc(t0);
+%     fprintf('Time-domain extraction finished in %.2f s\n', total_t_time);
+% end
+% 
+% % ---------------- Welch 特征 ----------------
+% welch_features_cell = cell(1, nrSubjects);
+% 
+% if CURRENT_ITERATION >= 2
+%     t0 = tic;
+%     fprintf('\nExtracting Welch features...\n');
+%     welch_features_cell = extract_welch_features(data); % [nEpochs x nChannels x 11]
+%     total_t_welch = toc(t0);
+%     fprintf('Welch extraction finished in %.2f s\n', total_t_welch);
+% else
+%     fprintf('\nSkipping Welch (CURRENT_ITERATION < 2)\n');
+%     for subj_idx = 1:nrSubjects
+%         subj_data = data{subj_idx};
+%         [nEpochs, nChannels, ~] = size(subj_data);
+%         welch_features_cell{subj_idx} = zeros(nEpochs, nChannels, 0);
+%     end
+% end
+% 
+% % ---------------- 拼接特征 ----------------
+% for subj_idx = 1:nrSubjects
+% 
+%     subj_data = data{subj_idx};
+%     [nEpochs, nChannels, ~] = size(subj_data);
+% 
+%     % TIME
+%     if EXTRACT_TIME
+%         time_feats = time_features_cell{subj_idx};
+%         nTime = size(time_feats,3);
+%     else
+%         time_feats = zeros(nEpochs, nChannels, 0);
+%         nTime = 0;
+%     end
+% 
+%     % WELCH
+%     welch_feats = welch_features_cell{subj_idx};
+%     nWelch = size(welch_feats,3);
+% 
+%     % 拼接 (仅 Time + Welch)
+%     subj_features = cat(3, time_feats, welch_feats);
+% 
+%     feature_data{subj_idx} = subj_features;
+% 
+%     % Summary
+%     fprintf('\nSubject %d summary:\n', subj_idx);
+%     fprintf('  Epochs = %d, Channels = %d\n', nEpochs, nChannels);
+%     fprintf('  features per channel = %d (time=%d, welch=%d)\n', ...
+%         size(subj_features,3), nTime, nWelch);
+%     fprintf('  subj_features size = [%d x %d x %d]\n', size(subj_features));
+% end
+% 
+% % ---------------- 计时 summary ----------------
+% fprintf('\n=== Timing summary ===\n');
+% if EXTRACT_TIME
+%     fprintf('Time-domain time: %.2f s\n', total_t_time);
+% else
+%     fprintf('Time-domain skipped\n');
+% end
+% if CURRENT_ITERATION >= 2
+%     fprintf('Welch time: %.2f s\n', total_t_welch);
+% else
+%     fprintf('Welch skipped\n');
+% end
+% 
+% fprintf('\n=== Feature extraction COMPLETE (TIME + WELCH) ===\n');
+% 
+% end
+
+
 function feature_data = feature_extraction(data)
-% FEATURE_EXTRACTION - 时间域 + Welch 特征提取（AR / DWT 已完全移除）
+% FEATURE_EXTRACTION - 时间域 + Welch + N1 特征提取（AR / DWT 已移除）
 %
 % 输入:
 %   data: 1xN cell，每个 cell [nEpochs x nChannels x nSamples]
@@ -153,9 +275,9 @@ function feature_data = feature_extraction(data)
 %
 % 可选参数（caller workspace）:
 %   EXTRACT_TIME = true/false (是否提取时域特征)
-%   CURRENT_ITERATION = 迭代次数（>=2 时提取 Welch）
+%   CURRENT_ITERATION = 迭代次数（>=2 时提取 Welch + N1）
 
-fprintf('Starting feature extraction (TIME + WELCH)...\n');
+fprintf('Starting feature extraction (TIME + WELCH + N1)...\n');
 
 % ---------------- 获取 CURRENT_ITERATION ----------------
 try
@@ -182,6 +304,7 @@ feature_data = cell(1, nrSubjects);
 % ---------------- 初始化计时器 ----------------
 total_t_time  = 0;
 total_t_welch = 0;
+total_t_n1    = 0;
 
 % ---------------- 时间域特征 ----------------
 time_features_cell = cell(1, nrSubjects);
@@ -193,21 +316,31 @@ if EXTRACT_TIME
     fprintf('Time-domain extraction finished in %.2f s\n', total_t_time);
 end
 
-% ---------------- Welch 特征 ----------------
+% ---------------- Welch + N1 特征 ----------------
 welch_features_cell = cell(1, nrSubjects);
+n1_features_cell    = cell(1, nrSubjects);
 
 if CURRENT_ITERATION >= 2
     t0 = tic;
     fprintf('\nExtracting Welch features...\n');
-    welch_features_cell = extract_welch_features(data); % [nEpochs x nChannels x 11]
+    welch_features_cell = extract_welch_features(data); % [nEpochs x nChannels x nWelch]
     total_t_welch = toc(t0);
     fprintf('Welch extraction finished in %.2f s\n', total_t_welch);
+    
+    % 提取 N1 独有特征
+    t0 = tic;
+    fprintf('\nExtracting N1-unique features...\n');
+    n1_features_cell = extract_n1_unique_features(data); % [nEpochs x nChannels x 5]
+    total_t_n1 = toc(t0);
+    fprintf('N1 feature extraction finished in %.2f s\n', total_t_n1);
+    
 else
     fprintf('\nSkipping Welch (CURRENT_ITERATION < 2)\n');
     for subj_idx = 1:nrSubjects
         subj_data = data{subj_idx};
         [nEpochs, nChannels, ~] = size(subj_data);
         welch_features_cell{subj_idx} = zeros(nEpochs, nChannels, 0);
+        n1_features_cell{subj_idx}    = zeros(nEpochs, nChannels, 0);
     end
 end
 
@@ -229,17 +362,21 @@ for subj_idx = 1:nrSubjects
     % WELCH
     welch_feats = welch_features_cell{subj_idx};
     nWelch = size(welch_feats,3);
+    
+    % N1 独有特征
+    n1_feats = n1_features_cell{subj_idx};
+    nN1 = size(n1_feats,3);
 
-    % 拼接 (仅 Time + Welch)
-    subj_features = cat(3, time_feats, welch_feats);
+    % 拼接 (Time + Welch + N1)
+    subj_features = cat(3, time_feats, welch_feats, n1_feats);
 
     feature_data{subj_idx} = subj_features;
 
     % Summary
     fprintf('\nSubject %d summary:\n', subj_idx);
     fprintf('  Epochs = %d, Channels = %d\n', nEpochs, nChannels);
-    fprintf('  features per channel = %d (time=%d, welch=%d)\n', ...
-        size(subj_features,3), nTime, nWelch);
+    fprintf('  features per channel = %d (time=%d, welch=%d, N1=%d)\n', ...
+        size(subj_features,3), nTime, nWelch, nN1);
     fprintf('  subj_features size = [%d x %d x %d]\n', size(subj_features));
 end
 
@@ -252,10 +389,12 @@ else
 end
 if CURRENT_ITERATION >= 2
     fprintf('Welch time: %.2f s\n', total_t_welch);
+    fprintf('N1 time: %.2f s\n', total_t_n1);
 else
     fprintf('Welch skipped\n');
+    fprintf('N1 skipped\n');
 end
 
-fprintf('\n=== Feature extraction COMPLETE (TIME + WELCH) ===\n');
+fprintf('\n=== Feature extraction COMPLETE (TIME + WELCH + N1) ===\n');
 
 end
