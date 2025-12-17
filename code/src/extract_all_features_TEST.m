@@ -1,6 +1,6 @@
 function feature_data = extract_all_features_TEST(data)
 feature_data = [];
-nrFeatures = 2;
+nrFeatures = 16;
 
 
 
@@ -19,28 +19,28 @@ end
 function features = extract_time_domain_features_per_epoch(epoch)
 features = [
     mean(epoch),                % Mean
-    %median(epoch),              % Median
+    median(epoch),              % Median
     std(epoch),                 % Standard Deviation
-    %var(epoch),                 % Variance
-    %rms(epoch),                 % Root Mean Square
-    %min(epoch),                 % Minimum
-    %max(epoch),                 % Maximum
-    %range(epoch),               % Range (Peak to Peak)
-    %skewness(epoch),            % Skewness
-    %kurtosis(epoch),            % Kurtosis
-    %zero_crossings(epoch),       % Zero Crossings
-    %hjorth_activity(epoch),      % Hjorth Activity
-    %hjorth_mobility(epoch),     % Hjorth Mobility
-    %hjorth_complexity(epoch),   % Hjorth Complexity
-    %sum(epoch.^2),              % Total Signal Energy
-    %sampen(epoch, 2, 0.2)       % Sample Entropy
+    var(epoch),                 % Variance
+    rms(epoch),                 % Root Mean Square
+    min(epoch),                 % Minimum
+    max(epoch),                 % Maximum
+    range(epoch),               % Range (Peak to Peak)
+    skewness(epoch),            % Skewness
+    kurtosis(epoch),            % Kurtosis
+    zero_crossings(epoch),       % Zero Crossings
+    hjorth_activity(epoch),      % Hjorth Activity
+    hjorth_mobility(epoch),     % Hjorth Mobility
+    hjorth_complexity(epoch),   % Hjorth Complexity
+    sum(epoch.^2),              % Total Signal Energy
+    sampen(epoch, 2, 0.2)       % Sample Entropy
     ];
 end
 
 function features = extract_time_domain_features_per_channel(data, CURRENT_ITERATION)
 
 n_epochs = size(data, 1);
-n_features_per_epoch = 2;
+n_features_per_epoch = 16;
 features = zeros(n_epochs, n_features_per_epoch);
 
 for i = 1:n_epochs
