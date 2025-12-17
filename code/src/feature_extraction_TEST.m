@@ -43,10 +43,10 @@ end
 
 
 function eeg_features = extract_eeg_features(channel_data)
-eeg_features_time = extract_all_features_TEST(channel_data);
+%eeg_features_time = extract_all_features_TEST(channel_data);
 eeg_features_welch = extract_welch_features_TEST(channel_data);
 eeg_features_N1 = extract_n1_unique_features_TEST(channel_data);
-eeg_features = [eeg_features_time, eeg_features_welch, eeg_features_N1];
+eeg_features = [eeg_features_welch, eeg_features_N1];
 end
 
 function eog_features = extract_eog_features(channel_data)
@@ -104,5 +104,7 @@ d = designfilt('bandpassiir','FilterOrder',4, ...
 hf_power = mean(filtfilt(d, channel_data')'.^2, 2);  % transpose trick
 
 % Combine features
+emg_features = [sig_power, var_epoch, hf_power, rms_val];
+end
 emg_features = [sig_power, var_epoch, hf_power, rms_val];
 end
